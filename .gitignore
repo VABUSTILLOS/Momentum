@@ -6,17 +6,16 @@ __v0_jsx-dev-runtime.ts
 # Common ignores
 node_modules
 .next/
-.env*.local
 .DS_Store
+.vercel
+.env*
+
 # Softgen - prevent committing dependencies and build artifacts
 dist/
 build/
 .cache/
-.vercel/
 .turbo/
 out/
-.env.local
-.env.*.local
 *.pem
 *.key
 *.jwt
