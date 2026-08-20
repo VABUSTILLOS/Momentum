@@ -6,7 +6,22 @@ __v0_jsx-dev-runtime.ts
 # Common ignores
 node_modules
 .next/
-.env*.local
 .DS_Store
 .vercel
 .env*
+
+# Softgen - prevent committing dependencies and build artifacts
+dist/
+build/
+.cache/
+.turbo/
+out/
+*.pem
+*.key
+*.jwt
+service-account*.json
+firebase-service-account.json
+credentials.json
+.git-credentials
+.secrets
+secrets/
