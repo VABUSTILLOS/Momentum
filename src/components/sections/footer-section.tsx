@@ -96,11 +96,9 @@ export function FooterSection() {
       <div className="border-t border-border px-6 py-6 md:px-12 lg:px-20">
         <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
           <p className="text-xs text-muted-foreground">
-            2026 MOMENTUM. Todos los derechos reservados.
+            Hecho con 💜 2026 MOMENTUM. Todos los derechos reservados.
           </p>
-
           
-
           {/* Social Links */}
           <div className="flex items-center gap-4">
             <Link
