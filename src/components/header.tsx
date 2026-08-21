@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, Moon, Sun, X } from "lucide-react";
+import { Menu, Moon, Search, Sun, X } from "lucide-react";
 import { useTheme } from "next-themes";
 
 export function Header() {
@@ -29,6 +29,11 @@ export function Header() {
           Momentum <span className="font-sans text-[10px] uppercase tracking-[0.18em] opacity-70">Todo para tu evento</span>
         </Link>
         <div className="flex items-center gap-3">
+          <label className={`hidden items-center gap-2 rounded-full border px-3 py-1.5 md:flex ${isScrolled ? "border-background/20 text-background" : "border-white/30 text-white"}`}>
+            <Search size={15} aria-hidden="true" />
+            <span className="sr-only">Buscar servicios</span>
+            <input type="search" placeholder="Buscar servicios" onChange={(event) => window.dispatchEvent(new CustomEvent("momentum:search", { detail: event.target.value }))} className="w-28 bg-transparent text-xs outline-none placeholder:opacity-70 lg:w-40" />
+          </label>
           <button
             type="button"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
