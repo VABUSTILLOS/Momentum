@@ -27,7 +27,7 @@ const steps = [
   {
     n: "04",
     t: "Liquida directo con cada proveedor",
-    d: "El 90% restante lo pagas directamente a cada proveedor, en los tiempos que acuerden. Momentum no retiene tu dinero ni infla precios: nuestro único ingreso es el 10% del apartado.",
+    d: "El 90% restante lo pagas directamente a cada proveedor, en los tiempos que acuerden. Momentum no retiene tu dinero ni infla precios: del apartado del 10%, la mitad es nuestra comisión y la otra mitad es un anticipo que se descuenta de lo que le pagas al proveedor.",
   },
 ];
 
