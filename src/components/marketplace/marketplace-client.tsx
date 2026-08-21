@@ -48,7 +48,7 @@ const SORTS: { id: SortId; label: string }[] = [
   { id: "rating", label: "Mejor valorados" },
 ];
 
-const APARTADO_PCT = 0.05;
+const APARTADO_PCT = 0.10;
 const apartadoDe = (v: number) => Math.round(v * APARTADO_PCT);
 
 interface CartItem {
@@ -313,7 +313,7 @@ function QuickView({
             </div>
             <div className="mt-3 rounded-xl bg-secondary px-4 py-3">
               <div className="flex items-baseline justify-between">
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Aparta tu fecha con solo 5%</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Aparta tu fecha con solo 10%</span>
                 <span className="text-base font-semibold text-foreground">{formatMXN(apartadoDe(vendor.basePrice))}</span>
               </div>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
@@ -469,11 +469,11 @@ function CartDrawer({
                 <span className="font-serif text-2xl font-medium text-foreground">{formatMXN(total)}</span>
               </div>
               <div className="mt-2 flex items-baseline justify-between rounded-xl bg-secondary px-4 py-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Apartado hoy (5%)</span>
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Apartado hoy (10%)</span>
                 <span className="text-base font-semibold text-foreground">{formatMXN(apartadoDe(total))}</span>
               </div>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                Así funciona Momentum: apartas a todos tus proveedores con solo el 5% y liquidas el resto directo con cada
+                Así funciona Momentum: apartas a todos tus proveedores con solo el 10% y liquidas el resto directo con cada
                 proveedor. El precio final se confirma en la cotización consolidada.
               </p>
               <form
@@ -645,13 +645,13 @@ function MarketplaceInner() {
         </p>
       </div>
 
-      {/* Cómo funciona — modelo de apartado 5% */}
+      {/* Cómo funciona — modelo de apartado 10% */}
       <div className="border-t border-border bg-secondary/50 px-6 py-10 md:px-12 lg:px-20">
         <div className="grid gap-8 md:grid-cols-3">
           {[
             { n: "01", t: "Explora y compara", d: "Proveedores verificados con precios transparentes, reseñas reales y disponibilidad en calendario." },
-            { n: "02", t: "Aparta con solo 5%", d: "Tu fecha queda reservada pagando únicamente el 5% del servicio a través de Momentum. Sin sorpresas." },
-            { n: "03", t: "Liquida directo", d: "El 95% restante lo pagas directamente a cada proveedor antes de tu evento. Momentum te acompaña todo el camino." },
+            { n: "02", t: "Aparta con solo 10%", d: "Tu fecha queda reservada pagando únicamente el 10% del servicio a través de Momentum. Sin sorpresas." },
+            { n: "03", t: "Liquida directo", d: "El 90% restante lo pagas directamente a cada proveedor antes de tu evento. Momentum te acompaña todo el camino." },
           ].map((step, i) => (
             <div key={step.n} className="animate-fade-in opacity-0" style={{ animationDelay: `${i * 120}ms`, animationFillMode: "forwards" }}>
               <p className="font-serif text-3xl text-muted-foreground">{step.n}</p>
@@ -846,7 +846,7 @@ function MarketplaceInner() {
               {cart.length} {cart.length === 1 ? "servicio" : "servicios"}
             </span>
             <span className="text-right">
-              <span className="block text-[10px] uppercase tracking-wider opacity-70">Aparta con 5%</span>
+              <span className="block text-[10px] uppercase tracking-wider opacity-70">Aparta con 10%</span>
               <span className="block text-sm font-semibold">
                 {formatMXN(apartadoDe(cart.reduce((sum, i) => sum + i.vendor.basePrice, 0)))}
               </span>
