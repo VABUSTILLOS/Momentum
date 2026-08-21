@@ -48,6 +48,9 @@ const SORTS: { id: SortId; label: string }[] = [
   { id: "rating", label: "Mejor valorados" },
 ];
 
+const APARTADO_PCT = 0.05;
+const apartadoDe = (v: number) => Math.round(v * APARTADO_PCT);
+
 interface CartItem {
   vendor: Vendor;
   date?: Date;
@@ -308,6 +311,15 @@ function QuickView({
                 {formatMXN(vendor.basePrice)} <span className="text-sm font-normal text-muted-foreground">{vendor.priceUnit}</span>
               </span>
             </div>
+            <div className="mt-3 rounded-xl bg-secondary px-4 py-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Aparta tu fecha con solo 5%</span>
+                <span className="text-base font-semibold text-foreground">{formatMXN(apartadoDe(vendor.basePrice))}</span>
+              </div>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                Momentum aparta al proveedor por ti. El resto lo liquidas directo con el proveedor antes de tu evento.
+              </p>
+            </div>
           </div>
 
           <div className="mt-6">
@@ -456,7 +468,14 @@ function CartDrawer({
                 <span className="text-sm text-muted-foreground">Estimado base</span>
                 <span className="font-serif text-2xl font-medium text-foreground">{formatMXN(total)}</span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">El precio final se confirma en la cotización consolidada.</p>
+              <div className="mt-2 flex items-baseline justify-between rounded-xl bg-secondary px-4 py-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Apartado hoy (5%)</span>
+                <span className="text-base font-semibold text-foreground">{formatMXN(apartadoDe(total))}</span>
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                Así funciona Momentum: apartas a todos tus proveedores con solo el 5% y liquidas el resto directo con cada
+                proveedor. El precio final se confirma en la cotización consolidada.
+              </p>
               <form
                 className="mt-4 flex flex-col gap-3"
                 onSubmit={(e) => {
@@ -626,6 +645,26 @@ function MarketplaceInner() {
         </p>
       </div>
 
+      {/* Cómo funciona — modelo de apartado 5% */}
+      <div className="border-t border-border bg-secondary/50 px-6 py-10 md:px-12 lg:px-20">
+        <div className="grid gap-8 md:grid-cols-3">
+          {[
+            { n: "01", t: "Explora y compara", d: "Proveedores verificados con precios transparentes, reseñas reales y disponibilidad en calendario." },
+            { n: "02", t: "Aparta con solo 5%", d: "Tu fecha queda reservada pagando únicamente el 5% del servicio a través de Momentum. Sin sorpresas." },
+            { n: "03", t: "Liquida directo", d: "El 95% restante lo pagas directamente a cada proveedor antes de tu evento. Momentum te acompaña todo el camino." },
+          ].map((step, i) => (
+            <div key={step.n} className="animate-fade-in opacity-0" style={{ animationDelay: `${i * 120}ms`, animationFillMode: "forwards" }}>
+              <p className="font-serif text-3xl text-muted-foreground">{step.n}</p>
+              <h3 className="mt-2 text-base font-semibold text-foreground">{step.t}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.d}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-8 text-center text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          Momentum es la forma segura de apartar a los proveedores de tu evento
+        </p>
+      </div>
+
       {/* Sticky search / sort bar */}
       <div className="sticky top-0 z-40 border-y border-border bg-background/90 backdrop-blur-md">
         <div className="flex items-center gap-3 px-6 py-3.5 md:px-12 lg:px-20">
@@ -680,7 +719,37 @@ function MarketplaceInner() {
         </div>
       </div>
 
-      <div className="flex gap-10 px-6 py-10 md:px-12 lg:px-20">
+      {/* Mobile quick category chips */}
+      <div className="flex gap-2 overflow-x-auto px-6 pt-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
+        <button
+          type="button"
+          onClick={() => setActiveCategories([])}
+          className={cn(
+            "shrink-0 rounded-full border px-4 py-2 text-xs font-medium transition-colors",
+            activeCategories.length === 0 ? "border-foreground bg-foreground text-background" : "border-border text-foreground"
+          )}
+        >
+          Todas
+        </button>
+        {CATEGORIES.map((cat) => {
+          const active = activeCategories.includes(cat.slug);
+          return (
+            <button
+              key={cat.slug}
+              type="button"
+              onClick={() => setActiveCategories((prev) => (active ? prev.filter((c) => c !== cat.slug) : [cat.slug]))}
+              className={cn(
+                "shrink-0 rounded-full border px-4 py-2 text-xs font-medium transition-colors",
+                active ? "border-foreground bg-foreground text-background" : "border-border text-foreground"
+              )}
+            >
+              {cat.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex gap-10 px-6 py-6 md:px-12 lg:px-20 lg:py-10">
         {/* Sidebar filters (desktop) */}
         <aside className="hidden w-60 shrink-0 lg:block">
           <div className="sticky top-24">
@@ -764,10 +833,32 @@ function MarketplaceInner() {
       <QuickView vendor={quickView} open={quickViewOpen} onClose={() => setQuickViewOpen(false)} onAdd={addToCart} />
       <CartDrawer items={cart} open={cartOpen} onClose={() => setCartOpen(false)} onRemove={(id) => setCart((prev) => prev.filter((i) => i.vendor.id !== id))} />
 
+      {/* Mobile sticky cart bar */}
+      {cart.length > 0 && !cartOpen && (
+        <div className="fixed inset-x-4 bottom-4 z-50 md:hidden">
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            className="flex w-full items-center justify-between rounded-full bg-foreground px-5 py-4 text-background shadow-2xl"
+          >
+            <span className="flex items-center gap-2.5 text-sm font-medium">
+              <ShoppingBag size={17} />
+              {cart.length} {cart.length === 1 ? "servicio" : "servicios"}
+            </span>
+            <span className="text-right">
+              <span className="block text-[10px] uppercase tracking-wider opacity-70">Aparta con 5%</span>
+              <span className="block text-sm font-semibold">
+                {formatMXN(apartadoDe(cart.reduce((sum, i) => sum + i.vendor.basePrice, 0)))}
+              </span>
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* Toast */}
       <div
         className={cn(
-          "fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 transition-all duration-300",
+          "fixed bottom-24 left-1/2 z-[60] md:bottom-6 -translate-x-1/2 transition-all duration-300",
           toast ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
         )}
       >
