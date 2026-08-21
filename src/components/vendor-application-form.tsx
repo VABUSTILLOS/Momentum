@@ -47,7 +47,7 @@ export function VendorApplicationForm() {
       }}
     >
       <h3 className="font-serif text-2xl font-medium tracking-tight text-foreground">Aplica como proveedor</h3>
-      <p className="text-sm text-muted-foreground">Sin costo de alta. Solo el 10% cuando un cliente aparta tu fecha.</p>
+      <p className="text-sm text-muted-foreground">Sin costo de alta. Solo el 5% de comisión, que queda pagada con el apartado del cliente.</p>
       <input required placeholder="Nombre o negocio" className={inputCls} />
       <input required type="email" placeholder="Correo electrónico" className={inputCls} />
       <input required type="tel" placeholder="WhatsApp" className={inputCls} />
