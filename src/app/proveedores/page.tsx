@@ -47,7 +47,7 @@ export default function ProveedoresPage() {
             <p className="font-serif text-2xl opacity-60">03</p>
             <h3 className="mt-2 font-semibold">Cobra el 90% directo y atiende tu agenda</h3>
             <p className="mt-2 text-sm leading-relaxed opacity-80">
-              El resto del pago es tuyo al 100%: lo cobras directamente con tu cliente, como siempre lo has hecho. Tú
+              El resto del pago es tuyo completamente: lo cobras directamente con tu cliente, como siempre lo has hecho. Tú
               solo te encargas de atender la agenda que te ayudamos a llenar.
             </p>
           </div>
