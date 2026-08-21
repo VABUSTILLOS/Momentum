@@ -6,7 +6,7 @@ import { VendorApplicationForm } from "@/components/vendor-application-form";
 export const metadata: Metadata = {
   title: "Ofrece tus servicios | Momentum",
   description:
-    "Publica tus servicios de eventos en Momentum gratis. Solo ganamos si tú ganas: el cliente aparta tu fecha con el 10% y con eso nuestra comisión queda pagada.",
+    "Publica tus servicios de eventos en Momentum gratis. Solo ganamos si tú ganas: el cliente aparta tu fecha con el 10% — el 5% es nuestra comisión justa y el 5% es tu anticipo.",
 };
 
 export default function ProveedoresPage() {
@@ -23,9 +23,10 @@ export default function ProveedoresPage() {
           Momentum solo gana si te hace ganar a ti.
         </h2>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed opacity-85">
-          No cobramos mensualidades, ni por publicar, ni por aparecer en resultados. Nuestro único ingreso es el 10% del
-          apartado que el cliente paga al reservar tu fecha. Si no te llenamos la agenda, no ganamos nada — así de
-          simple. Por eso nuestro trabajo es conseguirte clientes reales, no venderte anuncios.
+          No cobramos mensualidades, ni por publicar, ni por aparecer en resultados. Nuestro único ingreso es la mitad
+          del apartado que el cliente paga al reservar tu fecha: del 10% que paga, el 5% es la comisión justa de
+          Momentum por haberte llenado la agenda, y el otro 5% es tuyo desde el primer momento, como anticipo. Si no
+          te llenamos la agenda, no ganamos nada — así de simple.
         </p>
         <div className="mt-8 grid gap-8 md:grid-cols-3">
           <div>
@@ -39,25 +40,27 @@ export default function ProveedoresPage() {
             <p className="font-serif text-2xl opacity-60">02</p>
             <h3 className="mt-2 font-semibold">Recibe apartados del 10%</h3>
             <p className="mt-2 text-sm leading-relaxed opacity-80">
-              Cuando un cliente aparta tu fecha, paga el 10% del servicio a través de Momentum. En ese momento nuestra
-              comisión justa ya está pagada — no te descontamos nada después ni te cobramos al final del evento.
+              Cuando un cliente aparta tu fecha, paga el 10% del servicio a través de Momentum. De ese pago, el 5% es
+              nuestra comisión justa — que queda pagada en ese mismo momento, sin descuentos después — y el otro 5%
+              es para ti: tu fecha queda apartada con todo y pago desde el día uno.
             </p>
           </div>
           <div>
             <p className="font-serif text-2xl opacity-60">03</p>
             <h3 className="mt-2 font-semibold">Cobra el 90% directo y atiende tu agenda</h3>
             <p className="mt-2 text-sm leading-relaxed opacity-80">
-              El resto del pago es tuyo completamente: lo cobras directamente con tu cliente, como siempre lo has hecho. Tú
-              solo te encargas de atender la agenda que te ayudamos a llenar.
+              Cobras el 90% restante directamente con tu cliente, como siempre lo has hecho. Sumando tu anticipo, te
+              quedas con el 95% de tu precio. Tú solo te encargas de atender la agenda que te ayudamos a llenar.
             </p>
           </div>
         </div>
         <div className="mt-10 rounded-xl border border-background/20 p-5">
           <p className="text-sm leading-relaxed opacity-85">
             <strong className="font-semibold">Ejemplo real:</strong> tu paquete de DJ cuesta $18,500 MXN. El cliente
-            aparta la fecha pagando $1,850 MXN (10%) en Momentum — con ese pago nuestra comisión queda saldada por
-            completo. Tú recibes la fecha confirmada en tu calendario y cobras los $16,650 restantes directo al
-            cliente, íntegros y sin más descuentos.
+            aparta la fecha pagando $1,850 MXN (10%) en Momentum. De ese apartado, $925 MXN (5%) son la comisión justa
+            de Momentum por haberte conseguido al cliente — pagada en ese instante, sin cobros después — y $925 MXN
+            (5%) son tu anticipo. Luego cobras los $16,650 restantes directo al cliente: en total recibes $17,575 MXN,
+            el 95% de tu precio, sin más descuentos.
           </p>
         </div>
       </div>
@@ -65,12 +68,12 @@ export default function ProveedoresPage() {
       {/* Beneficios */}
       <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <InfoCard title="Cero costo fijo">
-          No pagas por publicar ni por aparecer. Si no hay apartados, no pagas nada. Nuestro único ingreso es el 10%
-          del apartado cuando un cliente confirma tu fecha.
+          No pagas por publicar ni por aparecer. Si no hay apartados, no pagas nada. Nuestro único ingreso es el 5%
+          de comisión cuando un cliente confirma tu fecha.
         </InfoCard>
         <InfoCard title="Comisión pagada desde el inicio">
-          En cuanto recibes un apartado, nuestra comisión ya está cubierta. Nada de cobros sorpresa al final del mes ni
-          porcentajes sobre lo que cobras por tu evento.
+          En cuanto recibes un apartado, nuestra comisión del 5% ya está cubierta con la mitad de ese pago — y la otra
+          mitad es tu anticipo. Nada de cobros sorpresa al final del mes ni porcentajes sobre tu evento.
         </InfoCard>
         <InfoCard title="Calendario inteligente">
           Tus fechas apartadas se bloquean automáticamente en el marketplace. Adiós a los dobles bookings y a los
