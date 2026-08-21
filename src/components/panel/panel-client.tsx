@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   BarChart3,
@@ -21,21 +21,12 @@ import {
   RESERVATIONS,
   type Reservation,
 } from "@/lib/panel-data";
-import { EASE } from "./shared";
+import { Divider, EASE, Eyebrow } from "./shared";
 import { FinanzasTab } from "./finanzas-tab";
 import { AgendaTab } from "./agenda-tab";
 import { PaquetesTab } from "./paquetes-tab";
 import { ReservasTab } from "./reservas-tab";
 import { ReservationSheet } from "./reservation-sheet";
-
-type TabId = "finanzas" | "agenda" | "paquetes" | "reservas";
-
-const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: "finanzas", label: "Tablero Finanzas", icon: BarChart3 },
-  { id: "agenda", label: "Mi Agenda & Contactos", icon: CalendarDays },
-  { id: "paquetes", label: "Configurar Paquetes", icon: Settings2 },
-  { id: "reservas", label: "Mis Reservas", icon: ClipboardList },
-];
 
 /* --------- Header idéntico en patrón al del marketplace (píldora) -------- */
 
@@ -96,10 +87,52 @@ function PanelHeader() {
   );
 }
 
+/* --------------------- Navegación de secciones (anclas) ------------------- */
+
+const SECTIONS = [
+  { id: "finanzas", label: "Finanzas", icon: BarChart3, num: "01", title: "Tablero de finanzas" },
+  { id: "agenda", label: "Agenda", icon: CalendarDays, num: "02", title: "Mi agenda & contactos" },
+  { id: "reservas", label: "Reservas", icon: ClipboardList, num: "03", title: "Mis reservas" },
+  { id: "paquetes", label: "Paquetes", icon: Settings2, num: "04", title: "Configurar paquetes" },
+] as const;
+
+function SectionNav() {
+  return (
+    <nav className="sticky top-[4.75rem] z-40 mb-14 flex gap-1 overflow-x-auto rounded-full border border-border bg-background/85 p-1.5 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {SECTIONS.map(({ id, label, icon: Icon }) => (
+        <a
+          key={id}
+          href={`#${id}`}
+          className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <Icon size={15} />
+          {label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function SectionHeading({ num, title, index }: { num: string; title: string; index: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.55, delay: index * 0.04, ease: EASE }}
+      className="mb-8"
+    >
+      <Eyebrow>{num} — Sección</Eyebrow>
+      <h2 className="mt-2 font-serif text-3xl font-medium tracking-tight text-foreground md:text-4xl">
+        {title}
+      </h2>
+    </motion.div>
+  );
+}
+
 /* --------------------------------- Shell --------------------------------- */
 
 export function PanelProveedorClient() {
-  const [tab, setTab] = useState<TabId>("finanzas");
   const [selected, setSelected] = useState<Reservation | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [blockedDates, setBlockedDates] = useState<Set<string>>(
@@ -123,7 +156,7 @@ export function PanelProveedorClient() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen scroll-smooth bg-background">
       <Toaster position="bottom-right" />
       <PanelHeader />
 
@@ -142,71 +175,47 @@ export function PanelProveedorClient() {
             Hola, {PROVIDER.name}
           </h1>
           <p className="mt-4 max-w-xl leading-relaxed text-muted-foreground">
-            Gestiona tus ganancias, paquetes, categorías y tu agenda de eventos con la ficha completa
-            de contacto de cada cliente.
+            Todo tu negocio en una sola vista: ganancias, agenda, reservas y la configuración de tus paquetes.
           </p>
         </motion.div>
 
-        {/* Tabs — píldoras como los filtros del marketplace */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.1, ease: EASE }}
-          className="mb-10 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={cn(
-                "relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-medium transition-colors",
-                tab === id
-                  ? "text-background"
-                  : "border border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
-              )}
-            >
-              {tab === id && (
-                <motion.span
-                  layoutId="panel-tab-pill"
-                  className="absolute inset-0 rounded-full bg-foreground"
-                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                />
-              )}
-              <span className="relative z-10 flex items-center gap-2">
-                <Icon size={15} />
-                {label}
-              </span>
-            </button>
-          ))}
-        </motion.div>
+        {/* Navegación pegajosa de las 4 áreas del panel */}
+        <SectionNav />
 
-        {/* Contenido de cada tab */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.35, ease: EASE }}
-          >
-            {tab === "finanzas" && (
-              <FinanzasTab reservations={reservations} onOpenReservation={openReservation} />
-            )}
-            {tab === "agenda" && (
-              <AgendaTab
-                reservations={reservations}
-                blockedDates={blockedDates}
-                onToggleBlocked={toggleBlocked}
-                onOpenReservation={openReservation}
-              />
-            )}
-            {tab === "paquetes" && <PaquetesTab />}
-            {tab === "reservas" && (
-              <ReservasTab reservations={reservations} onOpenReservation={openReservation} />
-            )}
-          </motion.div>
-        </AnimatePresence>
+        {/* 01 · Finanzas */}
+        <section id="finanzas" className="scroll-mt-36">
+          <SectionHeading num="01" title="Tablero de finanzas" index={0} />
+          <FinanzasTab reservations={reservations} onOpenReservation={openReservation} />
+        </section>
+
+        <Divider className="my-16" />
+
+        {/* 02 · Agenda */}
+        <section id="agenda" className="scroll-mt-36">
+          <SectionHeading num="02" title="Mi agenda & contactos" index={1} />
+          <AgendaTab
+            reservations={reservations}
+            blockedDates={blockedDates}
+            onToggleBlocked={toggleBlocked}
+            onOpenReservation={openReservation}
+          />
+        </section>
+
+        <Divider className="my-16" />
+
+        {/* 03 · Reservas */}
+        <section id="reservas" className="scroll-mt-36">
+          <SectionHeading num="03" title="Mis reservas" index={2} />
+          <ReservasTab reservations={reservations} onOpenReservation={openReservation} />
+        </section>
+
+        <Divider className="my-16" />
+
+        {/* 04 · Paquetes */}
+        <section id="paquetes" className="scroll-mt-36">
+          <SectionHeading num="04" title="Configurar paquetes" index={3} />
+          <PaquetesTab />
+        </section>
       </main>
 
       {/* Drawer de contacto del cliente */}
