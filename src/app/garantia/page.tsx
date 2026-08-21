@@ -5,7 +5,7 @@ import { InfoPage, InfoCard } from "@/components/info-page";
 export const metadata: Metadata = {
   title: "Garantía Momentum | Apartado protegido",
   description:
-    "Tu apartado del 5% está protegido: devolución total si el proveedor cancela y apoyo para encontrar un reemplazo.",
+    "Tu apartado del 10% está protegido: devolución total si el proveedor cancela y apoyo para encontrar un reemplazo.",
 };
 
 export default function GarantiaPage() {
@@ -13,11 +13,11 @@ export default function GarantiaPage() {
     <InfoPage
       kicker="Garantía Momentum"
       title={<>Tu apartado, <em>protegido.</em></>}
-      intro="Aparta con confianza: cada reservación del 5% está respaldada por nuestra garantía de fecha segura."
+      intro="Aparta con confianza: cada reservación del 10% está respaldada por nuestra garantía de fecha segura."
     >
       <div className="grid gap-4 md:grid-cols-3">
         <InfoCard title="Devolución del 100%">
-          Si el proveedor cancela tu fecha apartada, te devolvemos íntegro tu apartado del 5% en un máximo de 7 días
+          Si el proveedor cancela tu fecha apartada, te devolvemos íntegro tu apartado del 10% en un máximo de 7 días
           hábiles, sin preguntas ni procesos complicados.
         </InfoCard>
         <InfoCard title="Reemplazo garantizado">
@@ -36,7 +36,7 @@ export default function GarantiaPage() {
           <li>· La garantía cubre apartados pagados a través de Momentum y confirmados en el calendario del proveedor.</li>
           <li>· Si tú cancelas, el apartado no es reembolsable — es lo que mantiene tu fecha bloqueada y compensa al proveedor por reservarla.</li>
           <li>· Cambios de fecha están sujetos a la disponibilidad del proveedor; te ayudamos a negociarlos sin costo.</li>
-          <li>· El 95% restante se liquida directo con el proveedor bajo los términos que ustedes acuerden.</li>
+          <li>· El 90% restante se liquida directo con el proveedor bajo los términos que ustedes acuerden.</li>
         </ul>
         <p className="mt-6 text-sm text-muted-foreground">
           ¿Necesitas hacer válida tu garantía? Escríbenos desde la página de{" "}

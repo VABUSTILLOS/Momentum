@@ -13,11 +13,11 @@ const sections = [
   },
   {
     t: "2. Para qué los usamos",
-    c: "Usamos tus datos para procesar apartados del 5%, generar cotizaciones consolidadas, poner en contacto a clientes con proveedores, verificar proveedores, atender garantías y — si lo aceptas — enviarte novedades del marketplace. No vendemos tus datos a terceros.",
+    c: "Usamos tus datos para procesar apartados del 10%, generar cotizaciones consolidadas, poner en contacto a clientes con proveedores, verificar proveedores, atender garantías y — si lo aceptas — enviarte novedades del marketplace. No vendemos tus datos a terceros.",
   },
   {
     t: "3. Con quién los compartimos",
-    c: "Cuando apartas un servicio, compartimos con el proveedor únicamente los datos necesarios para confirmar tu reservación (nombre, contacto, fecha y servicio). Los pagos del 5% se procesan a través de pasarelas de pago certificadas; Momentum no almacena datos completos de tarjetas.",
+    c: "Cuando apartas un servicio, compartimos con el proveedor únicamente los datos necesarios para confirmar tu reservación (nombre, contacto, fecha y servicio). Los pagos del 10% se procesan a través de pasarelas de pago certificadas; Momentum no almacena datos completos de tarjetas.",
   },
   {
     t: "4. Conservación y seguridad",

@@ -5,7 +5,7 @@ import { InfoPage } from "@/components/info-page";
 export const metadata: Metadata = {
   title: "Cómo funciona | Momentum",
   description:
-    "Momentum es la forma segura de apartar a los proveedores de tu evento: explora, compara y reserva tu fecha pagando solo el 5% por adelantado.",
+    "Momentum es la forma segura de apartar a los proveedores de tu evento: explora, compara y reserva tu fecha pagando solo el 10% por adelantado.",
 };
 
 const steps = [
@@ -16,8 +16,8 @@ const steps = [
   },
   {
     n: "02",
-    t: "Aparta tu fecha con el 5%",
-    d: "Cuando encuentras al proveedor ideal, apartas la fecha pagando únicamente el 5% del precio del servicio a través de Momentum. Ese pago confirma la reservación y bloquea la fecha en el calendario del proveedor.",
+    t: "Aparta tu fecha con el 10%",
+    d: "Cuando encuentras al proveedor ideal, apartas la fecha pagando únicamente el 10% del precio del servicio a través de Momentum. Ese pago confirma la reservación y bloquea la fecha en el calendario del proveedor.",
   },
   {
     n: "03",
@@ -27,7 +27,7 @@ const steps = [
   {
     n: "04",
     t: "Liquida directo con cada proveedor",
-    d: "El 95% restante lo pagas directamente a cada proveedor, en los tiempos que acuerden. Momentum no retiene tu dinero ni infla precios: nuestro único ingreso es el 5% del apartado.",
+    d: "El 90% restante lo pagas directamente a cada proveedor, en los tiempos que acuerden. Momentum no retiene tu dinero ni infla precios: nuestro único ingreso es el 10% del apartado.",
   },
 ];
 
@@ -35,7 +35,7 @@ export default function ComoFuncionaPage() {
   return (
     <InfoPage
       kicker="Cómo funciona"
-      title={<>Aparta a tus proveedores con <em>solo el 5%.</em></>}
+      title={<>Aparta a tus proveedores con <em>solo el 10%.</em></>}
       intro="Momentum nació para resolver el caos de organizar un evento: mensajes que nadie contesta, fechas que se “congelan” y se pierden, y precios que cambian cada semana. Aquí apartas en serio, pagando poco."
     >
       <div className="grid gap-6 md:grid-cols-2">
@@ -49,10 +49,10 @@ export default function ComoFuncionaPage() {
       </div>
 
       <div className="mt-10 rounded-2xl bg-foreground p-8 text-background md:p-10">
-        <h2 className="font-serif text-2xl font-medium md:text-3xl">¿Por qué solo el 5%?</h2>
+        <h2 className="font-serif text-2xl font-medium md:text-3xl">¿Por qué solo el 10%?</h2>
         <div className="mt-4 grid gap-6 text-sm leading-relaxed opacity-85 md:grid-cols-2">
           <p>
-            Porque apartar no debería costarte la mitad de tu presupuesto. El 5% es suficiente para confirmar tu
+            Porque apartar no debería costarte la mitad de tu presupuesto. El 10% es suficiente para confirmar tu
             compromiso y bloquear la fecha — y lo suficientemente accesible para que asegures a tus proveedores favoritos
             meses antes de tu evento.
           </p>

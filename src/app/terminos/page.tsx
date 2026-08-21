@@ -3,7 +3,7 @@ import { InfoPage } from "@/components/info-page";
 
 export const metadata: Metadata = {
   title: "Términos de servicio | Momentum",
-  description: "Términos y condiciones de uso del marketplace Momentum y del modelo de apartado del 5%.",
+  description: "Términos y condiciones de uso del marketplace Momentum y del modelo de apartado del 10%.",
 };
 
 const sections = [
@@ -12,8 +12,8 @@ const sections = [
     c: "Momentum es un marketplace que conecta a organizadores de eventos con proveedores de servicios (música, catering, fotografía, venues, decoración, mesa de dulces, pastelería, vestuario y transporte, entre otros). Momentum no es el proveedor de los servicios: facilita el descubrimiento, la cotización y el apartado de fechas.",
   },
   {
-    t: "2. El apartado del 5%",
-    c: "Al apartar una fecha, el cliente paga a través de Momentum el 5% del precio base publicado del servicio. Este pago confirma la reservación y bloquea la fecha en el calendario del proveedor. El 5% no es un cargo adicional: forma parte del precio total del servicio. El 95% restante se liquida directamente entre el cliente y el proveedor bajo los términos que ambos acuerden. Momentum no custodia ni interviene en ese pago.",
+    t: "2. El apartado del 10%",
+    c: "Al apartar una fecha, el cliente paga a través de Momentum el 10% del precio base publicado del servicio. Este pago confirma la reservación y bloquea la fecha en el calendario del proveedor. El 10% no es un cargo adicional: forma parte del precio total del servicio. El 90% restante se liquida directamente entre el cliente y el proveedor bajo los términos que ambos acuerden. Momentum no custodia ni interviene en ese pago.",
   },
   {
     t: "3. Cancelaciones y reembolsos",
@@ -21,7 +21,7 @@ const sections = [
   },
   {
     t: "4. Proveedores",
-    c: "Publicar servicios en Momentum es gratuito. El proveedor acepta que la única comisión de la plataforma es el 5% pagado por el cliente al momento del apartado. El proveedor es responsable de mantener su calendario actualizado, cumplir las fechas apartadas y describir con exactitud sus paquetes. Los proveedores con badge “Verificado” aprobaron nuestro proceso de validación de identidad y calidad.",
+    c: "Publicar servicios en Momentum es gratuito. El proveedor acepta que la única comisión de la plataforma es el 10% pagado por el cliente al momento del apartado. El proveedor es responsable de mantener su calendario actualizado, cumplir las fechas apartadas y describir con exactitud sus paquetes. Los proveedores con badge “Verificado” aprobaron nuestro proceso de validación de identidad y calidad.",
   },
   {
     t: "5. Precios y cotizaciones",

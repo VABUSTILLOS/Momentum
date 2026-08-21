@@ -24,7 +24,7 @@ export default function NosotrosPage() {
           </p>
           <p className="mt-4">
             Momentum es ese sistema. Un marketplace donde cada proveedor tiene calendario público de disponibilidad,
-            precios transparentes y donde la fecha queda verdaderamente apartada con un pago del 5% — suficiente para
+            precios transparentes y donde la fecha queda verdaderamente apartada con un pago del 10% — suficiente para
             confirmar el compromiso de ambas partes, sin inmovilizar el presupuesto de nadie.
           </p>
           <p className="mt-4">
@@ -35,7 +35,7 @@ export default function NosotrosPage() {
         </div>
         <div className="flex flex-col gap-4">
           <div className="rounded-2xl bg-foreground p-8 text-background">
-            <p className="font-serif text-5xl font-medium">5%</p>
+            <p className="font-serif text-5xl font-medium">10%</p>
             <p className="mt-2 text-sm opacity-80">Lo único que pagas para apartar tu fecha. El resto, directo con tu proveedor.</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -55,7 +55,7 @@ export default function NosotrosPage() {
         <h2 className="font-serif text-2xl font-medium tracking-tight text-foreground md:text-3xl">Trabaja con nosotros</h2>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Buscamos gente obsesionada con que los eventos salgan bien: operaciones, verificación de proveedores, diseño y
-          tecnología. Y si eres proveedor de eventos, únete al marketplace — publicar es gratis y solo compartimos el 5%
+          tecnología. Y si eres proveedor de eventos, únete al marketplace — publicar es gratis y solo compartimos el 10%
           cuando un cliente aparta tu fecha.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">

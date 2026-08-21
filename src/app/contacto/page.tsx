@@ -20,7 +20,7 @@ export default function ContactoPage() {
           <div className="rounded-2xl border border-border p-6">
             <h3 className="text-base font-semibold text-foreground">Soy cliente</h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Dudas sobre tu apartado del 5%, cambios de fecha, garantía o cotización consolidada. Incluye el nombre del
+              Dudas sobre tu apartado del 10%, cambios de fecha, garantía o cotización consolidada. Incluye el nombre del
               proveedor y tu fecha para ayudarte más rápido.
             </p>
           </div>
