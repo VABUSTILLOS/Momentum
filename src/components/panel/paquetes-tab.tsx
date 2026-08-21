@@ -2,10 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Clock, MapPin, Plus, Save, ShieldCheck, HandCoins, Star, Trash2, Users, X } from "lucide-react";
+import { Check, Clock, MapPin, Plus, Save, Star, Trash2, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
 import { CATEGORIES, formatMXN } from "@/lib/marketplace-data";
 import { cn } from "@/lib/utils";
 import {
@@ -17,7 +16,7 @@ import {
   PROVIDER,
   type ProviderPackage,
 } from "@/lib/panel-data";
-import { EASE, Eyebrow, GoldDivider, PanelCard } from "./shared";
+import { EASE, Eyebrow, PanelCard, StatusPill } from "./shared";
 
 const CATEGORY_EMOJI: Record<string, string> = {
   musica: "🎵",
@@ -80,15 +79,17 @@ export function PaquetesTab() {
   );
 
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_400px]">
+    <div className="grid grid-cols-1 gap-8 xl:grid-cols-[1fr_400px]">
       {/* ------------------------- Columna izquierda ------------------------ */}
-      <div className="flex flex-col gap-6">
-        {/* Categorías oficiales */}
+      <div className="flex flex-col gap-8">
+        {/* Categorías oficiales — checkboxes circulares como los filtros del marketplace */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
           <PanelCard className="p-6">
             <Eyebrow>Categorías oficiales Momentum</Eyebrow>
-            <h3 className="mt-1.5 font-serif text-2xl tracking-tight text-white">¿En qué categorías participa tu negocio?</h3>
-            <p className="mt-1 text-sm text-neutral-400">
+            <h3 className="mt-1.5 font-serif text-2xl font-medium tracking-tight text-foreground">
+              ¿En qué categorías participa tu negocio?
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               Multi-asignación: marca todas las que apliquen. Tu negocio aparecerá en cada categoría del marketplace.
             </p>
             <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -99,23 +100,20 @@ export function PaquetesTab() {
                     key={c.slug}
                     type="button"
                     onClick={() => toggleCategory(c.slug)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all",
-                      active
-                        ? "border-[#C9A96E]/50 bg-[#C9A96E]/12 text-white"
-                        : "border-white/10 bg-white/[0.02] text-neutral-400 hover:border-white/25 hover:text-neutral-200"
-                    )}
+                    className="group flex items-center gap-3 rounded-xl border border-border px-4 py-3 text-left transition-colors hover:border-foreground/40"
                   >
                     <span
                       className={cn(
-                        "inline-flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
-                        active ? "border-[#C9A96E] bg-[#C9A96E] text-[#0A0A0A]" : "border-white/25"
+                        "inline-flex size-4.5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                        active
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border bg-background group-hover:border-foreground/40"
                       )}
                     >
-                      {active && <Check size={12} strokeWidth={3} />}
+                      {active && <Check size={11} strokeWidth={3} />}
                     </span>
                     <span className="mr-1">{CATEGORY_EMOJI[c.slug]}</span>
-                    {c.label}
+                    <span className="text-sm text-foreground">{c.label}</span>
                   </button>
                 );
               })}
@@ -123,7 +121,7 @@ export function PaquetesTab() {
           </PanelCard>
         </motion.div>
 
-        {/* Selector de paquete */}
+        {/* Selector de paquete + configurador */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.08, ease: EASE }}>
           <PanelCard className="p-6">
             <Eyebrow>Configurador de paquetes</Eyebrow>
@@ -134,10 +132,10 @@ export function PaquetesTab() {
                   type="button"
                   onClick={() => setActivePkgId(p.id)}
                   className={cn(
-                    "rounded-full border px-4 py-2 text-sm font-medium transition-all",
+                    "rounded-full px-4 py-2 text-sm font-medium transition-colors",
                     p.id === activePkgId
-                      ? "border-[#C9A96E] bg-[#C9A96E] text-[#0A0A0A]"
-                      : "border-white/12 text-neutral-300 hover:border-[#C9A96E]/40"
+                      ? "bg-foreground text-background"
+                      : "border border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
                   )}
                 >
                   {p.name}
@@ -145,16 +143,16 @@ export function PaquetesTab() {
               ))}
             </div>
 
-            <div className="mt-6 flex flex-col gap-7">
+            <div className="mt-7 flex flex-col gap-7">
               {/* Nombre del paquete */}
               <div>
-                <label className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
+                <label className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
                   Nombre del paquete
                 </label>
                 <input
                   value={pkg.name}
                   onChange={(e) => updatePkg({ name: e.target.value })}
-                  className="mt-2 w-full rounded-xl border border-white/12 bg-white/[0.03] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-[#C9A96E]/60"
+                  className="mt-2 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-foreground"
                 />
               </div>
 
@@ -190,8 +188,8 @@ export function PaquetesTab() {
               ].map(({ label, value, min, max, step, display, onChange }) => (
                 <div key={label}>
                   <div className="flex items-baseline justify-between">
-                    <label className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">{label}</label>
-                    <span className="font-serif text-lg text-[#E6CD9A]">{display}</span>
+                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">{label}</label>
+                    <span className="font-serif text-lg font-medium text-foreground">{display}</span>
                   </div>
                   <Slider
                     value={[value]}
@@ -199,14 +197,14 @@ export function PaquetesTab() {
                     max={max}
                     step={step}
                     onValueChange={([v]) => onChange(v)}
-                    className="mt-3 **:data-[slot=slider-range]:bg-[#C9A96E] **:data-[slot=slider-thumb]:border-[#C9A96E] **:data-[slot=slider-thumb]:bg-[#E6CD9A]"
+                    className="mt-3"
                   />
                 </div>
               ))}
 
               {/* Extras opcionales */}
               <div>
-                <label className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
+                <label className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
                   Extras opcionales (add-ons)
                 </label>
                 <div className="mt-3 flex flex-col gap-2">
@@ -217,18 +215,18 @@ export function PaquetesTab() {
                         initial={{ opacity: 0, x: -12 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 12 }}
-                        className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5"
+                        className="flex items-center justify-between rounded-xl border border-border px-4 py-2.5"
                       >
-                        <span className="flex items-center gap-2 text-sm text-neutral-200">
-                          <Plus size={13} className="text-[#C9A96E]" />
+                        <span className="flex items-center gap-2 text-sm text-foreground">
+                          <Plus size={13} className="text-muted-foreground" />
                           {extra.name}
                         </span>
                         <span className="flex items-center gap-3">
-                          <span className="text-sm text-[#E6CD9A]">+ {formatMXN(extra.price)}</span>
+                          <span className="text-sm font-medium text-foreground">+ {formatMXN(extra.price)}</span>
                           <button
                             type="button"
                             onClick={() => updatePkg({ extras: pkg.extras.filter((e) => e.name !== extra.name) })}
-                            className="text-neutral-500 transition-colors hover:text-red-400"
+                            className="text-muted-foreground transition-colors hover:text-destructive"
                             aria-label={`Eliminar ${extra.name}`}
                           >
                             <Trash2 size={14} />
@@ -243,19 +241,19 @@ export function PaquetesTab() {
                     value={newExtraName}
                     onChange={(e) => setNewExtraName(e.target.value)}
                     placeholder="Nombre del extra"
-                    className="min-w-0 flex-1 rounded-xl border border-white/12 bg-white/[0.03] px-4 py-2.5 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-[#C9A96E]/60"
+                    className="min-w-0 flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground"
                   />
                   <input
                     value={newExtraPrice}
                     onChange={(e) => setNewExtraPrice(e.target.value)}
                     placeholder="$ MXN"
                     inputMode="numeric"
-                    className="w-28 rounded-xl border border-white/12 bg-white/[0.03] px-4 py-2.5 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-[#C9A96E]/60"
+                    className="w-28 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground"
                   />
                   <button
                     type="button"
                     onClick={addExtra}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#C9A96E] px-4 py-2.5 text-sm font-semibold text-[#0A0A0A] transition-transform hover:scale-[1.03] active:scale-[0.97]"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90"
                   >
                     <Plus size={15} />
                     Añadir
@@ -265,7 +263,7 @@ export function PaquetesTab() {
 
               {/* Ítems incluidos */}
               <div>
-                <label className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
+                <label className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
                   Lo que incluye el paquete
                 </label>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -276,13 +274,13 @@ export function PaquetesTab() {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 text-xs text-neutral-200"
+                        className="inline-flex items-center gap-2 rounded-full bg-secondary px-3.5 py-1.5 text-xs text-foreground"
                       >
                         {item}
                         <button
                           type="button"
                           onClick={() => updatePkg({ includes: pkg.includes.filter((i) => i !== item) })}
-                          className="text-neutral-500 transition-colors hover:text-red-400"
+                          className="text-muted-foreground transition-colors hover:text-destructive"
                           aria-label={`Quitar ${item}`}
                         >
                           <X size={12} />
@@ -297,12 +295,12 @@ export function PaquetesTab() {
                     onChange={(e) => setNewInclude(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addInclude()}
                     placeholder="Ej. Degustación previa para 2"
-                    className="min-w-0 flex-1 rounded-xl border border-white/12 bg-white/[0.03] px-4 py-2.5 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-[#C9A96E]/60"
+                    className="min-w-0 flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground"
                   />
                   <button
                     type="button"
                     onClick={addInclude}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-[#C9A96E]/50 px-4 py-2.5 text-sm font-semibold text-[#E6CD9A] transition-colors hover:bg-[#C9A96E]/10"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
                   >
                     <Plus size={15} />
                     Añadir
@@ -315,6 +313,7 @@ export function PaquetesTab() {
       </div>
 
       {/* ------------------- Columna derecha: Live Preview ------------------ */}
+      {/* Réplica exacta de la tarjeta / QuickView que ve el cliente           */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -323,99 +322,109 @@ export function PaquetesTab() {
       >
         <Eyebrow className="mb-3 flex items-center gap-2">
           <span className="relative flex size-2">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#C9A96E] opacity-60" />
-            <span className="relative inline-flex size-2 rounded-full bg-[#C9A96E]" />
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-foreground opacity-40" />
+            <span className="relative inline-flex size-2 rounded-full bg-foreground" />
           </span>
           Vista en vivo — así te ve el cliente
         </Eyebrow>
 
-        <div className="overflow-hidden rounded-2xl border border-[#C9A96E]/25 bg-[#111111] shadow-[0_30px_70px_-30px_rgba(201,169,110,0.25)]">
-          {/* Imagen principal */}
-          <div className="relative h-52 overflow-hidden">
+        <article>
+          {/* Imagen con píldoras, igual que VendorCard */}
+          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-secondary">
             <img
               src={PROVIDER.image}
               alt={PROVIDER.name}
               className="size-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-transparent to-transparent" />
-            <div className="absolute left-4 top-4 flex flex-wrap gap-1.5">
+            <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+              {PROVIDER.verified && (
+                <span className="rounded-full bg-background/85 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground backdrop-blur">
+                  Verificado
+                </span>
+              )}
               {previewCategories.map((c) => (
-                <Badge key={c.slug} className="border border-black/20 bg-black/60 text-[11px] font-medium text-[#E6CD9A] backdrop-blur-md">
+                <span
+                  key={c.slug}
+                  className="rounded-full bg-foreground/85 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-background backdrop-blur"
+                >
                   {CATEGORY_EMOJI[c.slug]} {c.label}
-                </Badge>
+                </span>
               ))}
             </div>
-            {PROVIDER.verified && (
-              <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-[#C9A96E] px-3 py-1 text-[11px] font-bold text-[#0A0A0A]">
-                <ShieldCheck size={12} />
-                Verificado
-              </span>
-            )}
+            <span className="absolute bottom-4 left-4 inline-flex items-center gap-1.5 rounded-full bg-background/85 px-3 py-1.5 text-[11px] font-medium text-foreground backdrop-blur">
+              <MapPin size={12} /> {PROVIDER.location}
+            </span>
           </div>
 
-          <div className="p-5">
-            <div className="flex items-start justify-between gap-3">
+          {/* Cuerpo, mismo ritmo tipográfico que VendorCard */}
+          <div className="py-5">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <h4 className="font-serif text-2xl tracking-tight text-white">{PROVIDER.name}</h4>
-                <p className="mt-1 flex items-center gap-1.5 text-xs text-neutral-400">
-                  <MapPin size={12} className="text-[#C9A96E]" />
-                  {PROVIDER.location}
+                <p className="mb-1.5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  {previewCategories.map((c) => c.label).join(" · ") || "Sin categoría"}
                 </p>
+                <h4 className="font-serif text-2xl font-medium leading-snug tracking-tight text-foreground">
+                  {PROVIDER.name}
+                </h4>
+                <div className="mt-2 flex items-center gap-1.5 text-sm text-foreground">
+                  <Star size={14} className="fill-foreground" />
+                  <span className="font-medium">{PROVIDER.rating.toFixed(1)}</span>
+                  <span className="text-muted-foreground">({PROVIDER.reviews} reseñas)</span>
+                </div>
               </div>
-              <span className="flex items-center gap-1 text-sm text-[#E6CD9A]">
-                <Star size={14} fill="currentColor" />
-                {PROVIDER.rating.toFixed(1)}
-                <span className="text-xs text-neutral-500">({PROVIDER.reviews})</span>
-              </span>
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">desde</p>
+                <p className="text-base font-medium text-foreground">{formatMXN(pkg.basePrice)}</p>
+                <p className="text-xs text-muted-foreground">por evento</p>
+              </div>
             </div>
 
-            <p className="mt-3 text-sm leading-relaxed text-neutral-400">{pkg.name} · hasta {pkg.maxGuests} invitados · {pkg.hours} h de servicio</p>
-
-            <div className="mt-4 flex items-center gap-4 text-xs text-neutral-400">
-              <span className="flex items-center gap-1.5"><Users size={13} className="text-[#C9A96E]" /> {pkg.maxGuests} máx.</span>
-              <span className="flex items-center gap-1.5"><Clock size={13} className="text-[#C9A96E]" /> {pkg.hours} horas</span>
+            <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5"><Users size={13} /> Hasta {pkg.maxGuests} invitados</span>
+              <span className="flex items-center gap-1.5"><Clock size={13} /> {pkg.hours} horas de servicio</span>
             </div>
 
-            <GoldDivider className="my-5" />
-
-            {/* Precios */}
-            <div className="flex items-baseline justify-between">
-              <span className="text-xs uppercase tracking-[0.16em] text-neutral-500">Precio total</span>
-              <span className="font-serif text-3xl tracking-tight text-white">{formatMXN(pkg.basePrice)}</span>
-            </div>
-            <div className="mt-3 rounded-xl border border-[#C9A96E]/30 bg-[#C9A96E]/10 px-4 py-3">
-              <p className="text-sm text-neutral-200">
-                Aparta tu fecha con solo 10%:{" "}
-                <strong className="font-serif text-lg text-[#E6CD9A]">{formatMXN(apartadoDe(pkg.basePrice))}</strong>
+            {/* Caja de apartado — igual que en el QuickView */}
+            <div className="mt-5 rounded-2xl border border-border p-5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm text-muted-foreground">Precio total</span>
+                <span className="text-xl font-medium text-foreground">{formatMXN(pkg.basePrice)}</span>
+              </div>
+              <div className="mt-3 rounded-xl bg-secondary px-4 py-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
+                    Aparta tu fecha con solo 10%
+                  </span>
+                  <span className="text-base font-semibold text-foreground">{formatMXN(apartadoDe(pkg.basePrice))}</span>
+                </div>
+                <div className="mt-2 flex flex-col gap-1.5 text-xs leading-relaxed text-muted-foreground">
+                  <span className="flex items-center justify-between gap-3">
+                    <span>🛡️ 5% Comisión de Servicio y Garantía Momentum</span>
+                    <span className="text-foreground">{formatMXN(comisionDe(pkg.basePrice))}</span>
+                  </span>
+                  <span className="flex items-center justify-between gap-3">
+                    <span>🤝 5% Anticipo Directo para el Proveedor</span>
+                    <span className="text-foreground">{formatMXN(anticipoDe(pkg.basePrice))}</span>
+                  </span>
+                </div>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                El 90% restante ({formatMXN(saldoDe(pkg.basePrice))}) lo liquidas directamente con tu proveedor antes o el día del evento.
               </p>
-              <div className="mt-2.5 flex flex-col gap-1.5 text-xs text-neutral-400">
-                <span className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">🛡️ 5% Comisión de Servicio y Garantía Momentum</span>
-                  <span className="text-neutral-300">{formatMXN(comisionDe(pkg.basePrice))}</span>
-                </span>
-                <span className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">🤝 5% Anticipo Directo para el Proveedor</span>
-                  <span className="text-neutral-300">{formatMXN(anticipoDe(pkg.basePrice))}</span>
-                </span>
-              </div>
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
-              El {Math.round(90)}% restante ({formatMXN(saldoDe(pkg.basePrice))}) se liquida directamente con tu proveedor antes o el día del evento.
-            </p>
 
             <button
               type="button"
               onClick={handlePublish}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#C9A96E] px-5 py-3.5 text-sm font-bold text-[#0A0A0A] transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
             >
               <Save size={16} />
               Guardar y Publicar Cambios
             </button>
           </div>
-        </div>
+        </article>
 
-        <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-neutral-500">
-          <HandCoins size={13} className="mt-0.5 shrink-0 text-[#C9A96E]" />
+        <p className="text-xs leading-relaxed text-muted-foreground">
           La previsualización se actualiza en tiempo real con el configurador de paquetes.
         </p>
       </motion.div>
