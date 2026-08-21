@@ -15,7 +15,7 @@ const faqs = [
   },
   {
     q: "¿Cómo funciona el pago del 10%?",
-    a: "Cuando apartas una fecha, pagas únicamente el 10% del precio base del servicio a través de Momentum. Ese pago confirma tu reservación y bloquea la fecha. El 90% restante lo liquidas directamente con cada proveedor en los tiempos que acuerden.",
+    a: "Cuando apartas una fecha, pagas únicamente el 10% del precio base del servicio a través de Momentum. De ese 10%, el 5% es la comisión justa de Momentum y el otro 5% es un anticipo que se descuenta de lo que le pagas al proveedor. El 90% restante lo liquidas directamente con cada proveedor en los tiempos que acuerden.",
   },
   {
     q: "¿El 10% es un costo extra?",
@@ -39,7 +39,7 @@ const faqs = [
   },
   {
     q: "Soy proveedor, ¿cómo ofrezco mis servicios?",
-    a: "Publicar es gratis y sin mensualidades. La dinámica: el cliente aparta tu fecha pagando el 10% a través de Momentum (esa es nuestra única comisión) y tú cobras el 90% restante directo al cliente. Aplica desde la página de Proveedores.",
+    a: "Publicar es gratis y sin mensualidades. La dinámica: el cliente aparta tu fecha pagando el 10% — de ese pago, el 5% es la comisión justa de Momentum por ayudarte a llenar tu agenda y el otro 5% es tu anticipo, para que tu fecha quede apartada con todo y pago. Después cobras el 90% restante directo al cliente: en total te quedas con el 95% de tu precio. Aplica desde la página de Proveedores.",
   },
 ];
 
