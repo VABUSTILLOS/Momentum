@@ -5,7 +5,7 @@ import { CalendarDays, ChevronRight, MapPin, MessageCircle, Users } from "lucide
 import { formatMXN } from "@/lib/marketplace-data";
 import { anticipoDe, saldoDe, type Reservation } from "@/lib/panel-data";
 import { formatEventDate } from "./date-utils";
-import { EASE, Eyebrow, PanelCard, StatusPill } from "./shared";
+import { EASE, PanelCard, StatusPill } from "./shared";
 
 /* ------------------------------ Mis Reservas ----------------------------- */
 
@@ -17,19 +17,8 @@ export function ReservasTab({
   onOpenReservation: (r: Reservation) => void;
 }) {
   return (
-    <div className="flex flex-col gap-6">
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
-        <Eyebrow>Reservas activas</Eyebrow>
-        <h3 className="mt-1.5 font-serif text-2xl font-medium tracking-tight text-foreground">
-          {reservations.length} eventos en tu agenda
-        </h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Selecciona cualquier reserva para ver la ficha completa de contacto del cliente.
-        </p>
-      </motion.div>
-
-      <div className="flex flex-col gap-3">
-        {reservations.map((r, i) => (
+    <div className="flex flex-col gap-3">
+      {reservations.map((r, i) => (
           <motion.div
             key={r.id}
             initial={{ opacity: 0, y: 18 }}
@@ -109,7 +98,6 @@ export function ReservasTab({
             </PanelCard>
           </motion.div>
         ))}
-      </div>
     </div>
   );
 }
