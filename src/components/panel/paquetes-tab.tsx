@@ -108,6 +108,96 @@ const CATEGORY_SLIDERS: Record<string, CategorySlider[]> = {
 
 const FALLBACK_SLIDERS = CATEGORY_SLIDERS["pasteleria"];
 
+/* --------- Extras sugeridos según la categoría seleccionada --------- */
+
+interface SuggestedExtra {
+  name: string;
+  price: number;
+}
+
+const CATEGORY_EXTRAS: Record<string, SuggestedExtra[]> = {
+  pasteleria: [
+    { name: "Mesa de postres franceses", price: 6500 },
+    { name: "Fuente de chocolate", price: 3800 },
+    { name: "Piso adicional de pastel", price: 2400 },
+    { name: "Mini cupcakes de cortesía (50 pzas)", price: 1900 },
+    { name: "Topper personalizado", price: 850 },
+    { name: "Degustación previa para 4", price: 1200 },
+  ],
+  "mesa-de-dulces": [
+    { name: "Carrito de churros", price: 3200 },
+    { name: "Fuente de chocolate con fruta", price: 3800 },
+    { name: "Barra de café y repostería", price: 4500 },
+    { name: "Dulces personalizados con monograma", price: 2600 },
+    { name: "Estación de helados", price: 3900 },
+    { name: "Mesa salada (botanas gourmet)", price: 3400 },
+  ],
+  catering: [
+    { name: "Barra de cocteles de bienvenida", price: 5500 },
+    { name: "Estación de tacos al pastor", price: 6800 },
+    { name: "Mesa de quesos y charcutería", price: 4900 },
+    { name: "Servicio de meseros adicionales", price: 2800 },
+    { name: "Menú infantil", price: 2200 },
+    { name: "Coffee break de medianoche", price: 3600 },
+  ],
+  musica: [
+    { name: "Saxofonista para el vals", price: 3200 },
+    { name: "Hora extra de presentación", price: 4500 },
+    { name: "DJ para el after", price: 6000 },
+    { name: "Mariachi de bienvenida (45 min)", price: 7500 },
+    { name: "Pantalla LED con visuales", price: 5200 },
+    { name: "Karaoke con animador", price: 2800 },
+  ],
+  fotografia: [
+    { name: "Sesión pre-evento (getting ready)", price: 3500 },
+    { name: "Drone para tomas aéreas", price: 4200 },
+    { name: "Segundo fotógrafo", price: 5800 },
+    { name: "Álbum físico premium 30x30", price: 6500 },
+    { name: "Cabina de fotos con props", price: 4800 },
+    { name: "Video highlight de 3 min", price: 7500 },
+  ],
+  venues: [
+    { name: "Mobiliario lounge adicional", price: 8500 },
+    { name: "Iluminación arquitectónica", price: 6200 },
+    { name: "Valet parking (4 h)", price: 4800 },
+    { name: "Suite nupcial la noche del evento", price: 5500 },
+    { name: "Uso de jardín para ceremonia", price: 7000 },
+    { name: "Planta de luz de respaldo", price: 3900 },
+  ],
+  decoracion: [
+    { name: "Arco floral para ceremonia", price: 7800 },
+    { name: "Centros de mesa altos (por mesa)", price: 950 },
+    { name: "Cortina de luces cálidas", price: 4200 },
+    { name: "Letras gigantes iluminadas", price: 3600 },
+    { name: "Pista de baile iluminada", price: 8900 },
+    { name: "Bengalas frías de entrada", price: 2800 },
+  ],
+  "vestidos-novia": [
+    { name: "Velo de catedral", price: 2800 },
+    { name: "Segundo look (vestido de recepción)", price: 9500 },
+    { name: "Ramo de novia preservado", price: 1800 },
+    { name: "Bordado personalizado interior", price: 1500 },
+    { name: "Cita express adicional", price: 900 },
+    { name: "Kit de emergencia de costura", price: 650 },
+  ],
+  "trajes-tuxedos": [
+    { name: "Traje del novio incluido", price: 4200 },
+    { name: "Cummerbund y corbatín extra", price: 800 },
+    { name: "Planchado y entrega a domicilio", price: 1200 },
+    { name: "Traje para cortejo infantil", price: 1500 },
+    { name: "Día extra de renta", price: 900 },
+    { name: "Seguro contra daños menores", price: 600 },
+  ],
+  "autos-limosinas": [
+    { name: "Decoración floral del auto", price: 1600 },
+    { name: "Chófer con uniforme de gala", price: 900 },
+    { name: "Ruta de fotos por la ciudad (1 h)", price: 1800 },
+    { name: "Botella de espumante a bordo", price: 750 },
+    { name: "Auto adicional para familia", price: 3200 },
+    { name: "Alfombra roja en la entrada", price: 1100 },
+  ],
+};
+
 /* --------- Configuración de paquetes, categoría única + Live Preview --------- */
 
 export function PaquetesTab() {
@@ -153,6 +243,14 @@ export function PaquetesTab() {
     if (!newInclude.trim()) return;
     updatePkg({ includes: [...pkg.includes, newInclude.trim()] });
     setNewInclude("");
+  };
+
+  const suggestedExtras = (CATEGORY_EXTRAS[selectedCategory] ?? []).filter(
+    (s) => !pkg.extras.some((e) => e.name === s.name)
+  );
+
+  const addSuggestedExtra = (extra: SuggestedExtra) => {
+    updatePkg({ extras: [...pkg.extras, { name: extra.name, price: extra.price }] });
   };
 
   const handlePublish = () => {
@@ -286,6 +384,36 @@ export function PaquetesTab() {
                 <label className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
                   Extras opcionales (add-ons)
                 </label>
+
+                {/* Sugerencias según la categoría seleccionada */}
+                {suggestedExtras.length > 0 && (
+                  <div className="mt-3 rounded-xl bg-secondary/60 p-4">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                      Sugerencias para {category?.label ?? "tu categoría"} — clic para añadir
+                    </p>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      <AnimatePresence initial={false}>
+                        {suggestedExtras.map((s) => (
+                          <motion.button
+                            key={s.name}
+                            type="button"
+                            initial={{ opacity: 0, scale: 0.92 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.92 }}
+                            transition={{ duration: 0.25, ease: EASE }}
+                            onClick={() => addSuggestedExtra(s)}
+                            className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3.5 py-1.5 text-xs text-foreground transition-colors hover:border-foreground/40 hover:bg-secondary"
+                          >
+                            <Plus size={12} className="text-muted-foreground" />
+                            {s.name}
+                            <span className="font-medium text-foreground">{formatMXN(s.price)}</span>
+                          </motion.button>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-3 flex flex-col gap-2">
                   <AnimatePresence initial={false}>
                     {pkg.extras.map((extra) => (
