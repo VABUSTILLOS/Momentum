@@ -22,7 +22,7 @@ export function VendorApplicationForm() {
 
   if (sent) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-border p-10 text-center">
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-border p-6 text-center sm:p-10">
         <span className="inline-flex size-14 items-center justify-center rounded-full bg-foreground text-background">
           <Check size={24} />
         </span>
@@ -36,18 +36,18 @@ export function VendorApplicationForm() {
   }
 
   const inputCls =
-    "w-full rounded-full border border-border bg-background px-5 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+    "w-full rounded-full border border-border bg-background px-4 py-3.5 text-sm leading-5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring sm:px-5";
 
   return (
     <form
-      className="flex flex-col gap-3 rounded-2xl border border-border p-6 md:p-8"
+      className="flex flex-col gap-4 rounded-2xl border border-border p-5 sm:p-6 md:gap-3 md:p-8"
       onSubmit={(e) => {
         e.preventDefault();
         setSent(true);
       }}
     >
       <h3 className="font-serif text-2xl font-medium tracking-tight text-foreground">Aplica como proveedor</h3>
-      <p className="text-sm text-muted-foreground">Sin costo de alta. Solo el 5% de comisión, que queda pagada con el apartado del cliente.</p>
+      <p className="text-sm leading-6 text-muted-foreground">Sin costo de alta. Solo el 5% de comisión, que queda pagada con el apartado del cliente.</p>
       <input required placeholder="Nombre o negocio" className={inputCls} />
       <input required type="email" placeholder="Correo electrónico" className={inputCls} />
       <input required type="tel" placeholder="WhatsApp" className={inputCls} />

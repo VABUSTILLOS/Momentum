@@ -17,8 +17,8 @@ export default function ProveedoresPage() {
       intro="Únete al marketplace de eventos donde los clientes no solo preguntan: apartan. Publicar es gratis y Momentum solo gana cuando te hace ganar a ti."
     >
       {/* La dinámica */}
-      <div className="rounded-2xl bg-foreground p-8 text-background md:p-12">
-        <p className="text-xs uppercase tracking-[0.28em] opacity-70">La dinámica, sin letras chiquitas</p>
+      <div className="rounded-2xl bg-foreground p-5 text-background sm:p-6 md:p-12">
+        <p className="text-[11px] uppercase leading-5 tracking-[0.22em] opacity-70 sm:text-xs sm:tracking-[0.28em]">La dinámica, sin letras chiquitas</p>
         <h2 className="mt-4 max-w-2xl font-serif text-3xl font-medium leading-tight md:text-4xl">
           Momentum solo gana si te hace ganar a ti.
         </h2>
@@ -28,7 +28,7 @@ export default function ProveedoresPage() {
           Momentum por haberte llenado la agenda, y el otro 5% es tuyo desde el primer momento, como anticipo. Si no
           te llenamos la agenda, no ganamos nada — así de simple.
         </p>
-        <div className="mt-8 grid gap-8 md:grid-cols-3">
+        <div className="mt-7 grid gap-7 sm:mt-8 sm:gap-8 md:grid-cols-3">
           <div>
             <p className="font-serif text-2xl opacity-60">01</p>
             <h3 className="mt-2 font-semibold">Publica gratis</h3>
@@ -54,7 +54,7 @@ export default function ProveedoresPage() {
             </p>
           </div>
         </div>
-        <div className="mt-10 rounded-xl border border-background/20 p-5">
+        <div className="mt-8 rounded-xl border border-background/20 p-4 sm:mt-10 sm:p-5">
           <p className="text-sm leading-relaxed opacity-85">
             <strong className="font-semibold">Ejemplo real:</strong> tu paquete de DJ cuesta $18,500 MXN. El cliente
             aparta la fecha pagando $1,850 MXN (10%) en Momentum. De ese apartado, $925 MXN (5%) son la comisión justa
@@ -66,7 +66,7 @@ export default function ProveedoresPage() {
       </div>
 
       {/* Beneficios */}
-      <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-10 grid gap-3 sm:mt-12 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
         <InfoCard title="Cero costo fijo">
           No pagas por publicar ni por aparecer. Si no hay apartados, no pagas nada. Nuestro único ingreso es el 5%
           de comisión cuando un cliente confirma tu fecha.
