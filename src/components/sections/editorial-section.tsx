@@ -29,7 +29,7 @@ export function EditorialSection() {
             <p className="mb-2 text-xs uppercase tracking-widest text-muted-foreground">
               {spec.label}
             </p>
-            <p className="font-medium text-foreground text-4xl">
+            <p className="font-medium text-foreground text-2xl sm:text-3xl md:text-4xl">
               {spec.value}
             </p>
           </div>
