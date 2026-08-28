@@ -17,7 +17,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarX2, ChevronLeft, ChevronRight, CircleDot, Ban, MousePointerClick } from "lucide-react";
+import { CalendarX2, ChevronLeft, ChevronRight, CircleDot, Ban, MousePointerClick, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Reservation } from "@/lib/panel-data";
@@ -40,7 +40,7 @@ export function AgendaTab({
   onOpenReservation: (r: Reservation) => void;
 }) {
   const [view, setView] = useState<ViewMode>("mes");
-  const [cursor, setCursor] = useState<Date>(() => new Date(2026, 8, 1)); // sep 2026
+  const [cursor, setCursor] = useState<Date>(() => new Date());
   const [blockMode, setBlockMode] = useState(false);
 
   const byDate = useMemo(() => {
@@ -64,6 +64,12 @@ export function AgendaTab({
 
   const goPrev = () => setCursor((c) => (view === "mes" ? addMonths(c, -1) : addWeeks(c, -1)));
   const goNext = () => setCursor((c) => (view === "mes" ? addMonths(c, 1) : addWeeks(c, 1)));
+  const goToday = () => setCursor(new Date());
+
+  const blockedSorted = useMemo(
+    () => [...blockedDates].sort(),
+    [blockedDates]
+  );
 
   const handleDayClick = (day: Date) => {
     const key = dateKey(day);
@@ -123,6 +129,13 @@ export function AgendaTab({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={goToday}
+            className="rounded-full border border-border px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+          >
+            Hoy
+          </button>
           {/* Toggle mensual / semanal — mismo segmented control del marketplace */}
           <div className="flex rounded-full border border-border p-1">
             {(["mes", "semana"] as ViewMode[]).map((m) => (
@@ -151,13 +164,13 @@ export function AgendaTab({
             )}
           >
             <CalendarX2 size={14} />
-            {blockMode ? "Modo bloqueo activo" : "Bloquear fechas"}
+            {blockMode ? "Modo bloqueo activo" : "Bloquear disponibilidad"}
           </button>
         </div>
       </motion.div>
 
-      {/* Aviso de modo bloqueo */}
-      <AnimatePresence>
+      {/* Ayuda permanente del bloqueo + aviso destacado en modo bloqueo */}
+      <AnimatePresence initial={false}>
         {blockMode && (
           <motion.p
             initial={{ opacity: 0, height: 0 }}
@@ -288,6 +301,62 @@ export function AgendaTab({
               );
             })}
           </div>
+        </PanelCard>
+      </motion.div>
+
+      {/* Lista de fechas bloqueadas — gestión sin navegar el calendario */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55, delay: 0.18, ease: EASE }}
+      >
+        <PanelCard className="p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <Eyebrow>Disponibilidad manual</Eyebrow>
+              <h3 className="mt-1.5 font-serif text-2xl font-medium tracking-tight text-foreground">
+                Fechas bloqueadas
+              </h3>
+            </div>
+            <p className="flex max-w-sm items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+              <MousePointerClick size={14} className="mt-0.5 shrink-0" />
+              Para bloquear más fechas, activa «Bloquear disponibilidad» y haz clic en los días del calendario.
+            </p>
+          </div>
+
+          {blockedSorted.length > 0 ? (
+            <ul className="mt-5 flex flex-col gap-2">
+              {blockedSorted.map((iso) => (
+                <li
+                  key={iso}
+                  className="flex items-center justify-between rounded-xl border border-border px-4 py-2.5"
+                >
+                  <span className="flex items-center gap-2 text-sm text-foreground">
+                    <Ban size={13} className="text-destructive" />
+                    {format(parseISO(iso), "EEEE d 'de' MMMM, yyyy", { locale: es })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleBlocked(iso);
+                      toast.info("Fecha liberada", {
+                        description: `${format(parseISO(iso), "d 'de' MMMM, yyyy", { locale: es })} vuelve a estar disponible en el marketplace.`,
+                      });
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+                    aria-label={`Liberar ${format(parseISO(iso), "d 'de' MMMM", { locale: es })}`}
+                  >
+                    <X size={12} />
+                    Liberar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-5 rounded-xl bg-secondary/60 px-4 py-3 text-sm text-muted-foreground">
+              No tienes fechas bloqueadas. Todos tus días libres aparecen disponibles en el marketplace.
+            </p>
+          )}
         </PanelCard>
       </motion.div>
 

@@ -2,17 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   BarChart3,
   CalendarDays,
   ClipboardList,
+  LayoutDashboard,
+  LogOut,
   Moon,
   Settings2,
   Sun,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { signOut } from "@/lib/actions/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -21,16 +24,17 @@ import {
   RESERVATIONS,
   type Reservation,
 } from "@/lib/panel-data";
-import { Divider, EASE, Eyebrow } from "./shared";
+import { EASE, Eyebrow } from "./shared";
 import { FinanzasTab } from "./finanzas-tab";
 import { AgendaTab } from "./agenda-tab";
 import { PaquetesTab } from "./paquetes-tab";
 import { ReservasTab } from "./reservas-tab";
+import { ResumenTab } from "./resumen-tab";
 import { ReservationSheet } from "./reservation-sheet";
 
 /* --------- Header idéntico en patrón al del marketplace (píldora) -------- */
 
-function PanelHeader() {
+function PanelHeader({ pendientes }: { pendientes: number }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -67,6 +71,14 @@ function PanelHeader() {
           </Link>
         </div>
         <div className="flex items-center gap-3">
+          {pendientes > 0 && (
+            <span className="hidden items-center gap-1.5 rounded-full border border-background/20 px-3 py-1.5 text-[11px] font-medium text-background sm:inline-flex">
+              <span className="inline-flex size-4 items-center justify-center rounded-full bg-background text-[10px] font-bold text-foreground">
+                {pendientes}
+              </span>
+              por confirmar
+            </span>
+          )}
           <button
             type="button"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
@@ -81,58 +93,128 @@ function PanelHeader() {
             </span>
             <span className="text-sm font-medium text-foreground">{PROVIDER.name}</span>
           </span>
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
+              aria-label="Cerrar sesión"
+            >
+              <LogOut size={16} aria-hidden="true" />
+            </button>
+          </form>
         </div>
       </div>
     </header>
   );
 }
 
-/* --------------------- Navegación de secciones (anclas) ------------------- */
+/* ------------------------- Navegación por pestañas ------------------------ */
 
-const SECTIONS = [
-  { id: "finanzas", label: "Finanzas", icon: BarChart3, num: "01", title: "Tablero de finanzas" },
-  { id: "agenda", label: "Agenda", icon: CalendarDays, num: "02", title: "Mi agenda & contactos" },
-  { id: "reservas", label: "Reservas", icon: ClipboardList, num: "03", title: "Mis reservas" },
-  { id: "paquetes", label: "Paquetes", icon: Settings2, num: "04", title: "Configurar paquetes" },
+const TABS = [
+  { id: "resumen", label: "Resumen", icon: LayoutDashboard },
+  { id: "finanzas", label: "Finanzas", icon: BarChart3 },
+  { id: "agenda", label: "Agenda", icon: CalendarDays },
+  { id: "reservas", label: "Reservas", icon: ClipboardList },
+  { id: "paquetes", label: "Paquetes", icon: Settings2 },
 ] as const;
 
-function SectionNav() {
+export type TabId = (typeof TABS)[number]["id"];
+
+function isTabId(value: string | null): value is TabId {
+  return TABS.some((t) => t.id === value);
+}
+
+function TabsNav({
+  active,
+  onChange,
+  pendientes,
+}: {
+  active: TabId;
+  onChange: (tab: TabId) => void;
+  pendientes: number;
+}) {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const idx = TABS.findIndex((t) => t.id === active);
+    let next = -1;
+    if (e.key === "ArrowRight") next = (idx + 1) % TABS.length;
+    if (e.key === "ArrowLeft") next = (idx - 1 + TABS.length) % TABS.length;
+    if (e.key === "Home") next = 0;
+    if (e.key === "End") next = TABS.length - 1;
+    if (next >= 0) {
+      e.preventDefault();
+      onChange(TABS[next].id);
+      document.getElementById(`tab-${TABS[next].id}`)?.focus();
+    }
+  };
+
   return (
-    <nav className="sticky top-[4.75rem] z-40 mb-14 flex gap-1 overflow-x-auto rounded-full border border-border bg-background/85 p-1.5 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {SECTIONS.map(({ id, label, icon: Icon }) => (
-        <a
-          key={id}
-          href={`#${id}`}
-          className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          <Icon size={15} />
-          {label}
-        </a>
-      ))}
-    </nav>
+    <div
+      role="tablist"
+      aria-label="Secciones del panel"
+      onKeyDown={handleKeyDown}
+      className="sticky top-[4.75rem] z-40 mb-10 flex gap-1 overflow-x-auto rounded-full border border-border bg-background/85 p-1.5 backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
+      {TABS.map(({ id, label, icon: Icon }) => {
+        const isActive = id === active;
+        return (
+          <button
+            key={id}
+            id={`tab-${id}`}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            aria-controls={`panel-${id}`}
+            tabIndex={isActive ? 0 : -1}
+            onClick={() => onChange(id)}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors",
+              isActive
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            )}
+          >
+            <Icon size={15} />
+            {label}
+            {id === "reservas" && pendientes > 0 && (
+              <span
+                className={cn(
+                  "inline-flex size-4.5 items-center justify-center rounded-full text-[10px] font-bold",
+                  isActive ? "bg-background text-foreground" : "bg-foreground text-background"
+                )}
+              >
+                {pendientes}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
-function SectionHeading({ num, title, index }: { num: string; title: string; index: number }) {
+function TabHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.55, delay: index * 0.04, ease: EASE }}
-      className="mb-8"
-    >
-      <Eyebrow>{num} — Sección</Eyebrow>
+    <div className="mb-8">
+      <Eyebrow>{eyebrow}</Eyebrow>
       <h2 className="mt-2 font-serif text-3xl font-medium tracking-tight text-foreground md:text-4xl">
         {title}
       </h2>
-    </motion.div>
+    </div>
   );
+}
+
+/** Saludo según la hora del día */
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Buenos días";
+  if (h < 19) return "Buenas tardes";
+  return "Buenas noches";
 }
 
 /* --------------------------------- Shell --------------------------------- */
 
 export function PanelProveedorClient() {
+  const [activeTab, setActiveTab] = useState<TabId>("resumen");
   const [selected, setSelected] = useState<Reservation | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [blockedDates, setBlockedDates] = useState<Set<string>>(
@@ -140,6 +222,25 @@ export function PanelProveedorClient() {
   );
 
   const reservations = useMemo(() => RESERVATIONS, []);
+  const pendientes = useMemo(
+    () => reservations.filter((r) => r.status === "por-confirmar").length,
+    [reservations]
+  );
+
+  // Deep-link: lee ?tab= al montar y refleja cambios en la URL
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get("tab");
+    if (isTabId(param)) setActiveTab(param);
+  }, []);
+
+  const changeTab = (tab: TabId) => {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    if (tab === "resumen") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", tab);
+    window.history.replaceState(null, "", url.toString());
+    window.scrollTo({ top: 0 });
+  };
 
   const openReservation = (r: Reservation) => {
     setSelected(r);
@@ -156,12 +257,12 @@ export function PanelProveedorClient() {
   };
 
   return (
-    <div className="min-h-screen scroll-smooth bg-background">
+    <div className="min-h-screen bg-background">
       <Toaster position="bottom-right" />
-      <PanelHeader />
+      <PanelHeader pendientes={pendientes} />
 
       <main className="mx-auto w-[90%] max-w-6xl pb-20 pt-28">
-        {/* Encabezado — mismo patrón tipográfico del hero de marketplace */}
+        {/* Encabezado — saludo según la hora del día */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -169,7 +270,7 @@ export function PanelProveedorClient() {
           className="mb-10"
         >
           <p className="text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-            Bienvenido de vuelta
+            {greeting()}
           </p>
           <h1 className="mt-3 font-serif text-4xl font-medium leading-[1.02] tracking-tight text-foreground md:text-5xl">
             Hola, {PROVIDER.name}
@@ -179,43 +280,60 @@ export function PanelProveedorClient() {
           </p>
         </motion.div>
 
-        {/* Navegación pegajosa de las 4 áreas del panel */}
-        <SectionNav />
+        {/* Navegación por pestañas */}
+        <TabsNav active={activeTab} onChange={changeTab} pendientes={pendientes} />
 
-        {/* 01 · Finanzas */}
-        <section id="finanzas" className="scroll-mt-36">
-          <SectionHeading num="01" title="Tablero de finanzas" index={0} />
-          <FinanzasTab reservations={reservations} onOpenReservation={openReservation} />
-        </section>
-
-        <Divider className="my-16" />
-
-        {/* 02 · Agenda */}
-        <section id="agenda" className="scroll-mt-36">
-          <SectionHeading num="02" title="Mi agenda & contactos" index={1} />
-          <AgendaTab
-            reservations={reservations}
-            blockedDates={blockedDates}
-            onToggleBlocked={toggleBlocked}
-            onOpenReservation={openReservation}
-          />
-        </section>
-
-        <Divider className="my-16" />
-
-        {/* 03 · Reservas */}
-        <section id="reservas" className="scroll-mt-36">
-          <SectionHeading num="03" title="Mis reservas" index={2} />
-          <ReservasTab reservations={reservations} onOpenReservation={openReservation} />
-        </section>
-
-        <Divider className="my-16" />
-
-        {/* 04 · Paquetes */}
-        <section id="paquetes" className="scroll-mt-36">
-          <SectionHeading num="04" title="Configurar paquetes" index={3} />
-          <PaquetesTab />
-        </section>
+        {/* Contenido de la pestaña activa */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={activeTab}
+            id={`panel-${activeTab}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${activeTab}`}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: EASE }}
+          >
+            {activeTab === "resumen" && (
+              <ResumenTab
+                reservations={reservations}
+                blockedDates={blockedDates}
+                onOpenReservation={openReservation}
+                onGoToTab={changeTab}
+              />
+            )}
+            {activeTab === "finanzas" && (
+              <>
+                <TabHeading eyebrow="Finanzas" title="Tablero de finanzas" />
+                <FinanzasTab reservations={reservations} onOpenReservation={openReservation} />
+              </>
+            )}
+            {activeTab === "agenda" && (
+              <>
+                <TabHeading eyebrow="Agenda" title="Mi agenda & disponibilidad" />
+                <AgendaTab
+                  reservations={reservations}
+                  blockedDates={blockedDates}
+                  onToggleBlocked={toggleBlocked}
+                  onOpenReservation={openReservation}
+                />
+              </>
+            )}
+            {activeTab === "reservas" && (
+              <>
+                <TabHeading eyebrow="Reservas" title="Mis reservas" />
+                <ReservasTab reservations={reservations} onOpenReservation={openReservation} />
+              </>
+            )}
+            {activeTab === "paquetes" && (
+              <>
+                <TabHeading eyebrow="Paquetes" title="Configurar paquetes" />
+                <PaquetesTab />
+              </>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Drawer de contacto del cliente */}

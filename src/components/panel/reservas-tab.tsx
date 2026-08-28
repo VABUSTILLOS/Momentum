@@ -1,13 +1,23 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, ChevronRight, MapPin, MessageCircle, Users } from "lucide-react";
+import { CalendarDays, ChevronRight, ClipboardList, MapPin, MessageCircle, Users } from "lucide-react";
 import { formatMXN } from "@/lib/marketplace-data";
 import { anticipoDe, saldoDe, type Reservation } from "@/lib/panel-data";
+import { cn } from "@/lib/utils";
 import { formatEventDate } from "./date-utils";
 import { EASE, PanelCard, StatusPill } from "./shared";
 
 /* ------------------------------ Mis Reservas ----------------------------- */
+
+type StatusFilter = "todas" | "confirmada" | "por-confirmar";
+
+const FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: "todas", label: "Todas" },
+  { id: "confirmada", label: "Confirmadas" },
+  { id: "por-confirmar", label: "Por confirmar" },
+];
 
 export function ReservasTab({
   reservations,
@@ -16,9 +26,60 @@ export function ReservasTab({
   reservations: Reservation[];
   onOpenReservation: (r: Reservation) => void;
 }) {
+  const [filter, setFilter] = useState<StatusFilter>("todas");
+
+  const filtered = useMemo(
+    () =>
+      [...reservations]
+        .filter((r) => filter === "todas" || r.status === filter)
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [reservations, filter]
+  );
+
+  const counts = useMemo(
+    () => ({
+      todas: reservations.length,
+      confirmada: reservations.filter((r) => r.status === "confirmada").length,
+      "por-confirmar": reservations.filter((r) => r.status === "por-confirmar").length,
+    }),
+    [reservations]
+  );
+
   return (
-    <div className="flex flex-col gap-3">
-      {reservations.map((r, i) => (
+    <div className="flex flex-col gap-5">
+      {/* Filtro por estatus */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex rounded-full border border-border p-1" role="group" aria-label="Filtrar por estatus">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilter(f.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all",
+                filter === f.id
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {f.label}
+              <span
+                className={cn(
+                  "inline-flex size-4 items-center justify-center rounded-full text-[10px] font-bold",
+                  filter === f.id ? "bg-background text-foreground" : "bg-secondary text-foreground"
+                )}
+              >
+                {counts[f.id]}
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">Ordenadas por fecha más próxima</p>
+      </div>
+
+      {/* Lista de reservas */}
+      <div className="flex flex-col gap-3">
+        {filtered.map((r, i) => (
           <motion.div
             key={r.id}
             initial={{ opacity: 0, y: 18 }}
@@ -82,22 +143,57 @@ export function ReservasTab({
                 </div>
               </button>
 
-              {/* Acceso rápido a WhatsApp en móvil */}
-              <div className="mt-4 flex gap-2 border-t border-border pt-4 md:hidden">
+              {/* Acceso rápido a WhatsApp */}
+              <div className="mt-4 flex gap-2 border-t border-border pt-4">
                 <a
                   href={`https://wa.me/${r.phone}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
                 >
                   <MessageCircle size={14} />
                   WhatsApp directo
                 </a>
+                <button
+                  type="button"
+                  onClick={() => onOpenReservation(r)}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+                >
+                  Ver ficha completa
+                </button>
               </div>
             </PanelCard>
           </motion.div>
         ))}
+
+        {filtered.length === 0 && (
+          <PanelCard className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <span className="inline-flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+              <ClipboardList size={20} />
+            </span>
+            <p className="font-medium text-foreground">
+              {filter === "por-confirmar"
+                ? "No hay reservas por confirmar"
+                : "No hay reservas en este filtro"}
+            </p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {filter === "por-confirmar"
+                ? "Todas tus reservas están confirmadas. ¡Buen trabajo!"
+                : "Prueba con otra opción del filtro de estatus."}
+            </p>
+            {filter !== "todas" && (
+              <button
+                type="button"
+                onClick={() => setFilter("todas")}
+                className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background transition-opacity hover:opacity-90"
+              >
+                Ver todas las reservas
+              </button>
+            )}
+          </PanelCard>
+        )}
+      </div>
     </div>
   );
 }

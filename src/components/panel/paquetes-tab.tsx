@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Clock, MapPin, Plus, Save, Star, Trash2, Users, X } from "lucide-react";
+import { Check, Clock, MapPin, Pencil, Plus, Save, Star, Trash2, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { Slider } from "@/components/ui/slider";
 import { CATEGORIES, formatMXN } from "@/lib/marketplace-data";
@@ -207,6 +207,12 @@ export function PaquetesTab() {
   const [newExtraName, setNewExtraName] = useState("");
   const [newExtraPrice, setNewExtraPrice] = useState("");
   const [newInclude, setNewInclude] = useState("");
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [savedSnapshot, setSavedSnapshot] = useState(() =>
+    JSON.stringify({ packages: INITIAL_PACKAGES, category: PROVIDER.categories[0] })
+  );
+
+  const dirty = JSON.stringify({ packages, category: selectedCategory }) !== savedSnapshot;
 
   const pkg = packages.find((p) => p.id === activePkgId) ?? packages[0];
   const sliders = CATEGORY_SLIDERS[selectedCategory] ?? FALLBACK_SLIDERS;
@@ -218,6 +224,7 @@ export function PaquetesTab() {
 
   const selectCategory = (slug: string) => {
     setSelectedCategory(slug);
+    setCategoryOpen(false);
     // Re-encuadra los valores actuales a los rangos de la nueva categoría
     const cfg = CATEGORY_SLIDERS[slug] ?? FALLBACK_SLIDERS;
     setPackages((prev) =>
@@ -254,55 +261,92 @@ export function PaquetesTab() {
   };
 
   const handlePublish = () => {
+    setSavedSnapshot(JSON.stringify({ packages, category: selectedCategory }));
     toast.success("Cambios publicados", {
       description: `${pkg.name} ya está visible en ${category?.label ?? "tu categoría"} con precio de ${formatMXN(pkg.basePrice)}.`,
     });
   };
 
+  const handleDiscard = () => {
+    const snap = JSON.parse(savedSnapshot) as { packages: ProviderPackage[]; category: string };
+    setPackages(snap.packages);
+    setSelectedCategory(snap.category);
+    toast.info("Cambios descartados", {
+      description: "Se restauró la última versión publicada de tus paquetes.",
+    });
+  };
+
   return (
+    <div className="flex flex-col gap-8">
     <div className="grid grid-cols-1 gap-8 xl:grid-cols-[1fr_400px]">
       {/* ------------------------- Columna izquierda ------------------------ */}
       <div className="flex flex-col gap-8">
-        {/* Categoría de publicación — selección única */}
+        {/* Categoría de publicación — colapsada una vez elegida */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
           <PanelCard className="p-6">
-            <Eyebrow>Categoría de publicación</Eyebrow>
-            <h3 className="mt-1.5 font-serif text-2xl font-medium tracking-tight text-foreground">
-              ¿En qué categoría se publica este paquete?
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Selecciona una sola categoría — así el cliente te encuentra sin ruido y el configurador adapta sus
-              medidas a tu tipo de servicio.
-            </p>
-            <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              {CATEGORIES.map((c) => {
-                const active = selectedCategory === c.slug;
-                return (
-                  <button
-                    key={c.slug}
-                    type="button"
-                    onClick={() => selectCategory(c.slug)}
-                    className={cn(
-                      "group flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
-                      active ? "border-foreground bg-secondary/60" : "border-border hover:border-foreground/40"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "inline-flex size-4.5 shrink-0 items-center justify-center rounded-full border transition-colors",
-                        active
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border bg-background group-hover:border-foreground/40"
-                      )}
-                    >
-                      {active && <Check size={11} strokeWidth={3} />}
-                    </span>
-                    <span className="mr-1">{CATEGORY_EMOJI[c.slug]}</span>
-                    <span className="text-sm text-foreground">{c.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {!categoryOpen && category ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex size-10 items-center justify-center rounded-full bg-secondary text-lg">
+                    {CATEGORY_EMOJI[category.slug]}
+                  </span>
+                  <div>
+                    <Eyebrow>Publicado en</Eyebrow>
+                    <p className="mt-0.5 font-serif text-xl font-medium tracking-tight text-foreground">
+                      {category.label}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCategoryOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+                >
+                  <Pencil size={13} />
+                  Cambiar categoría
+                </button>
+              </div>
+            ) : (
+              <>
+                <Eyebrow>Categoría de publicación</Eyebrow>
+                <h3 className="mt-1.5 font-serif text-2xl font-medium tracking-tight text-foreground">
+                  ¿En qué categoría se publica este paquete?
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Selecciona una sola categoría — así el cliente te encuentra sin ruido y el configurador adapta sus
+                  medidas a tu tipo de servicio.
+                </p>
+                <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {CATEGORIES.map((c) => {
+                    const active = selectedCategory === c.slug;
+                    return (
+                      <button
+                        key={c.slug}
+                        type="button"
+                        onClick={() => selectCategory(c.slug)}
+                        className={cn(
+                          "group flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
+                          active ? "border-foreground bg-secondary/60" : "border-border hover:border-foreground/40"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "inline-flex size-4.5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                            active
+                              ? "border-foreground bg-foreground text-background"
+                              : "border-border bg-background group-hover:border-foreground/40"
+                          )}
+                        >
+                          {active && <Check size={11} strokeWidth={3} />}
+                        </span>
+                        <span className="mr-1">{CATEGORY_EMOJI[c.slug]}</span>
+                        <span className="text-sm text-foreground">{c.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </PanelCard>
         </motion.div>
 
@@ -617,14 +661,9 @@ export function PaquetesTab() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handlePublish}
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
-            >
-              <Save size={16} />
-              Guardar y Publicar Cambios
-            </button>
+            <p className="mt-6 text-center text-xs text-muted-foreground">
+              Usa la barra inferior para guardar y publicar tus cambios.
+            </p>
           </div>
         </article>
 
@@ -632,6 +671,55 @@ export function PaquetesTab() {
           La previsualización se actualiza en tiempo real con el configurador de paquetes.
         </p>
       </motion.div>
+    </div>
+
+    {/* Barra de acción fija — guardar/publicar siempre visible */}
+    <div className="sticky bottom-4 z-30">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-full border border-border bg-foreground px-5 py-3 shadow-2xl">
+        <p className="flex items-center gap-2 text-xs font-medium text-background/80">
+          {dirty ? (
+            <>
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-background opacity-60" />
+                <span className="relative inline-flex size-2 rounded-full bg-background" />
+              </span>
+              Tienes cambios sin publicar
+            </>
+          ) : (
+            <>
+              <Check size={13} />
+              Todo publicado — así te ven los clientes
+            </>
+          )}
+        </p>
+        <div className="flex items-center gap-2">
+          {dirty && (
+            <button
+              type="button"
+              onClick={handleDiscard}
+              className="inline-flex items-center gap-1.5 rounded-full border border-background/25 px-4 py-2 text-xs font-medium text-background transition-colors hover:bg-background/10"
+            >
+              <X size={13} />
+              Descartar
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handlePublish}
+            disabled={!dirty}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all",
+              dirty
+                ? "bg-background text-foreground hover:opacity-90"
+                : "cursor-default bg-background/20 text-background/60"
+            )}
+          >
+            <Save size={15} />
+            Guardar y Publicar
+          </button>
+        </div>
+      </div>
+    </div>
     </div>
   );
 }

@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import {
   CalendarDays,
+  Check,
   Clock,
+  Copy,
   Mail,
   MapPin,
   MessageCircle,
@@ -34,6 +37,32 @@ import { formatEventDate } from "./date-utils";
 
 /* ------- Ficha / Drawer de detalle y contacto del cliente (reserva) ------- */
 /* Mismo patrón visual que el QuickView del marketplace                       */
+
+function CopyButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // portapapeles no disponible (p. ej. contexto no seguro) — ignorar
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+      aria-label={copied ? `${label} copiado` : `Copiar ${label}`}
+      title={copied ? "Copiado" : `Copiar ${label}`}
+    >
+      {copied ? <Check size={13} className="text-foreground" /> : <Copy size={13} />}
+    </button>
+  );
+}
 
 export function ReservationSheet({
   reservation,
@@ -79,10 +108,12 @@ export function ReservationSheet({
                   <div className="flex items-center gap-3 text-foreground">
                     <Phone size={15} className="shrink-0 text-muted-foreground" />
                     <span>+{reservation.phone}</span>
+                    <CopyButton value={`+${reservation.phone}`} label="teléfono" />
                   </div>
                   <div className="flex items-center gap-3 text-foreground">
                     <Mail size={15} className="shrink-0 text-muted-foreground" />
                     <span className="break-all">{reservation.email}</span>
+                    <CopyButton value={reservation.email} label="correo" />
                   </div>
                 </div>
                 <a

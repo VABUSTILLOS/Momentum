@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowUpRight,
@@ -23,8 +24,17 @@ import {
   saldoDe,
   type Reservation,
 } from "@/lib/panel-data";
+import { cn } from "@/lib/utils";
 import { AnimatedMoney, AnimatedNumber, EASE, Eyebrow, PanelCard, StatusPill } from "./shared";
 import { formatEventDate } from "./date-utils";
+
+type StatusFilter = "todas" | "confirmada" | "por-confirmar";
+
+const FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: "todas", label: "Todas" },
+  { id: "confirmada", label: "Confirmadas" },
+  { id: "por-confirmar", label: "Por confirmar" },
+];
 
 /* ------------------------- Tablero de ganancias ------------------------- */
 
@@ -36,6 +46,24 @@ export function FinanzasTab({
   onOpenReservation: (r: Reservation) => void;
 }) {
   const summary = financeSummary(reservations);
+  const [filter, setFilter] = useState<StatusFilter>("todas");
+
+  const filtered = useMemo(
+    () =>
+      filter === "todas"
+        ? reservations
+        : reservations.filter((r) => r.status === filter),
+    [reservations, filter]
+  );
+
+  const totals = useMemo(
+    () => ({
+      total: filtered.reduce((acc, r) => acc + r.total, 0),
+      anticipo: filtered.reduce((acc, r) => acc + anticipoDe(r.total), 0),
+      saldo: filtered.reduce((acc, r) => acc + saldoDe(r.total), 0),
+    }),
+    [filtered]
+  );
 
   const metrics = [
     {
@@ -120,14 +148,31 @@ export function FinanzasTab({
         transition={{ duration: 0.55, delay: 0.4, ease: EASE }}
       >
         <PanelCard className="overflow-hidden">
-          <div className="flex items-center justify-between px-6 pb-2 pt-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-2 pt-6">
             <div>
               <Eyebrow>Tabla de transacciones</Eyebrow>
               <h3 className="mt-1.5 font-serif text-2xl font-medium tracking-tight text-foreground">
                 Movimientos por reserva
               </h3>
             </div>
-            <StatusPill tone="neutral">{reservations.length} reservas</StatusPill>
+            {/* Filtro por estatus */}
+            <div className="flex rounded-full border border-border p-1" role="group" aria-label="Filtrar por estatus">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFilter(f.id)}
+                  className={cn(
+                    "rounded-full px-3.5 py-1.5 text-xs font-medium transition-all",
+                    filter === f.id
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="mt-4 overflow-x-auto">
             <Table>
@@ -136,13 +181,14 @@ export function FinanzasTab({
                   <TableHead className="pl-6 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Cliente</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Evento</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Fecha</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Estatus</TableHead>
                   <TableHead className="text-right text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Total</TableHead>
                   <TableHead className="text-right text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Anticipo (5%)</TableHead>
                   <TableHead className="pr-6 text-right text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Saldo (90%)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reservations.map((r) => (
+                {filtered.map((r) => (
                   <TableRow
                     key={r.id}
                     onClick={() => onOpenReservation(r)}
@@ -158,11 +204,36 @@ export function FinanzasTab({
                       </StatusPill>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">{formatEventDate(r.date)}</TableCell>
+                    <TableCell>
+                      <StatusPill tone={r.status === "confirmada" ? "solid" : "outline"}>
+                        {r.status === "confirmada" ? "Confirmada" : "Por confirmar"}
+                      </StatusPill>
+                    </TableCell>
                     <TableCell className="text-right font-medium text-foreground">{formatMXN(r.total)}</TableCell>
                     <TableCell className="text-right text-foreground">{formatMXN(anticipoDe(r.total))}</TableCell>
                     <TableCell className="pr-6 text-right font-medium text-foreground">{formatMXN(saldoDe(r.total))}</TableCell>
                   </TableRow>
                 ))}
+                {filtered.length === 0 && (
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableCell colSpan={7} className="py-12 text-center">
+                      <p className="font-medium text-foreground">Sin reservas en este filtro</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Prueba con otra opción del filtro de estatus.
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {filtered.length > 0 && (
+                  <TableRow className="border-border bg-secondary/50 hover:bg-secondary/50">
+                    <TableCell className="pl-6 font-medium text-foreground" colSpan={4}>
+                      Totales · {filtered.length} reserva(s)
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-foreground">{formatMXN(totals.total)}</TableCell>
+                    <TableCell className="text-right font-semibold text-foreground">{formatMXN(totals.anticipo)}</TableCell>
+                    <TableCell className="pr-6 text-right font-semibold text-foreground">{formatMXN(totals.saldo)}</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
