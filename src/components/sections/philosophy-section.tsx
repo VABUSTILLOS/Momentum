@@ -31,7 +31,7 @@ export function PhilosophySection() {
   }, [update]);
 
   return (
-    <section id="products" className="overflow-hidden bg-background">
+    <section id="products" className="bg-background">
       <div ref={sectionRef} className="relative" style={{ height: "200vh" }}>
         <div className="sticky top-0 flex min-h-screen items-center justify-center overflow-hidden">
           <div className="w-full">
