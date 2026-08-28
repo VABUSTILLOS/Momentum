@@ -7,6 +7,7 @@ import {
   ArrowRight,
   CalendarDays,
   Check,
+  Heart,
   Moon,
   Pencil,
   Plus,
@@ -22,7 +23,7 @@ import { FadeImage } from "@/components/fade-image";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
-import { useEvent, type EventItem } from "@/lib/event-context";
+import { useEvent, type EventItem, type EventType } from "@/lib/event-context";
 import { CATEGORIES, formatMXN, type Vendor } from "@/lib/marketplace-data";
 import { recommendVendors, type Recommendation } from "@/lib/recommendations";
 import { cn } from "@/lib/utils";
@@ -99,6 +100,14 @@ function MiEventoHeader({ count }: { count: number }) {
 
 /* ------------------------------ Detalles ----------------------------------- */
 
+const EVENT_TYPES: { id: EventType; label: string }[] = [
+  { id: "boda", label: "Boda" },
+  { id: "xv", label: "XV Años" },
+  { id: "cumpleanos", label: "Cumpleaños" },
+  { id: "corporativo", label: "Corporativo" },
+  { id: "otro", label: "Otro" },
+];
+
 function EventDatePicker({ date, onChange }: { date?: Date; onChange: (d?: Date) => void }) {
   const [open, setOpen] = useState(false);
   return (
@@ -134,7 +143,29 @@ function DetailsSection() {
   return (
     <section {...fade(200)}>
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Detalles de tu evento</p>
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
+      <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-border p-5">
+          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <Sparkles size={14} /> Tipo de evento
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {EVENT_TYPES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => updateDetails({ type: t.id })}
+                className={cn(
+                  "rounded-full px-3.5 py-2 text-xs font-medium transition-colors",
+                  details.type === t.id
+                    ? "bg-foreground text-background"
+                    : "border border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="rounded-2xl border border-border p-5">
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             <CalendarDays size={14} /> Fecha
@@ -189,8 +220,38 @@ function DetailsSection() {
   );
 }
 
-/* ------------------------------- Checklist --------------------------------- */
+/* ------------------------------ CTA de boda -------------------------------- */
 
+function WeddingCTA() {
+  return (
+    <section {...fade(250)}>
+      <Link
+        href="/mi-evento/boda"
+        className="group flex flex-col gap-6 rounded-3xl bg-foreground p-8 text-background transition-shadow hover:shadow-2xl sm:flex-row sm:items-center sm:justify-between md:p-10"
+      >
+        <div className="flex items-start gap-5">
+          <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-background text-foreground">
+            <Heart size={24} className="fill-foreground" />
+          </span>
+          <div>
+            <p className="font-serif text-2xl font-medium tracking-tight md:text-3xl">
+              Crea la página web de tu boda
+            </p>
+            <p className="mt-2 max-w-md text-sm leading-relaxed opacity-80">
+              Comparte tu historia con una página estilo bodas.com: cuenta regresiva, ceremonia y recepción, mesa de
+              regalos y confirmación de asistencia para tus invitados.
+            </p>
+          </div>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-background px-6 py-3.5 text-sm font-medium text-foreground transition-transform group-hover:scale-[1.03]">
+          Empezar ahora <ArrowRight size={15} />
+        </span>
+      </Link>
+    </section>
+  );
+}
+
+/* ------------------------------- Checklist --------------------------------- */
 function ChecklistSection({ items }: { items: EventItem[] }) {
   const covered = useMemo(() => new Set(items.map((i) => i.vendor.category)), [items]);
   const pct = Math.round((covered.size / CATEGORIES.length) * 100);
@@ -633,6 +694,7 @@ export function MiEventoClient() {
       ) : (
         <div className="flex flex-col gap-12 px-6 md:px-12 lg:px-20">
           <DetailsSection />
+          {details.type === "boda" && <WeddingCTA />}
           {items.length === 0 ? (
             <div {...fade(300)}>
               <EmptyState />

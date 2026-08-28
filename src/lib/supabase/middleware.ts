@@ -10,6 +10,15 @@ const ROLE_HOME: Record<AppRole, string> = {
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // Sin credenciales de Supabase configuradas (demo con datos mock),
+  // no hay auth que aplicar: se omite la guarda.
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ) {
+    return response;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
