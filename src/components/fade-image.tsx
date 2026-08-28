@@ -9,32 +9,7 @@ interface FadeImageProps extends Omit<ImageProps, "onLoad" | "ref"> {
 
 export function FadeImage({ className, fadeDelay = 0, ...props }: FadeImageProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  // Fallback para imágenes ya cacheadas/completas antes de montarse
-  // o que no disparan onLoad (el evento se pierde si ya cargaron).
-  useEffect(() => {
-    if (imgRef.current?.complete) {
-      setIsLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isVisible) return;
-    if (imgRef.current?.complete) {
-      setIsLoaded(true);
-      return;
-    }
-    const id = window.setInterval(() => {
-      if (imgRef.current?.complete) {
-        setIsLoaded(true);
-        window.clearInterval(id);
-      }
-    }, 150);
-    return () => window.clearInterval(id);
-  }, [isVisible]);
 
   useEffect(() => {
     const el = ref.current;
@@ -62,7 +37,11 @@ export function FadeImage({ className, fadeDelay = 0, ...props }: FadeImageProps
 
     const onScroll = () => {
       const rect = el.getBoundingClientRect();
-      if (rect.top < window.innerHeight && rect.bottom > 0) {
+      // Reveal when the element is in view OR has already scrolled past the
+      // top of the viewport. On fast/smooth scrolls an element can jump past
+      // the viewport between frames; requiring it to be inside the viewport
+      // would leave it stuck at opacity 0 forever.
+      if (rect.top < window.innerHeight + 100) {
         reveal();
         observer.disconnect();
         window.removeEventListener("scroll", onScroll);
@@ -82,12 +61,10 @@ export function FadeImage({ className, fadeDelay = 0, ...props }: FadeImageProps
   return (
     <div ref={ref} className="relative h-full w-full">
       <Image
-        ref={imgRef}
         {...props}
         className={`${className || ""} transition-all duration-700 ease-out ${
-          isVisible && isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-[1.02]"
+          isVisible ? "opacity-100 scale-100" : "opacity-0 scale-[1.02]"
         }`}
-        onLoad={() => setIsLoaded(true)}
       />
     </div>
   );
