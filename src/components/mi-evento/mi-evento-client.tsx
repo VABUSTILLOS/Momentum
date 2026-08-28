@@ -28,8 +28,8 @@ import { cn } from "@/lib/utils";
 const APARTADO_PCT = 0.1;
 const apartadoDe = (v: number) => Math.round(v * APARTADO_PCT);
 
-const fade = (delay: number) => ({
-  className: "animate-fade-in opacity-0",
+const fade = (delay: number, className?: string) => ({
+  className: cn("animate-fade-in opacity-0", className),
   style: { animationDelay: `${delay}ms`, animationFillMode: "forwards" as const },
 });
 
@@ -338,7 +338,7 @@ function BudgetPanel({ items }: { items: EventItem[] }) {
   const fillPct = Math.min(100, Math.round((total / details.budget) * 100));
 
   return (
-    <aside {...fade(500)} className="lg:sticky lg:top-28">
+    <aside {...fade(500, "lg:sticky lg:top-28")}>
       <div className="rounded-2xl border border-border p-6">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Presupuesto</p>
         <div className="mt-4 flex items-baseline justify-between">
@@ -511,7 +511,7 @@ export function MiEventoClient() {
 
       {/* Hero */}
       <div className="px-6 pb-10 pt-32 md:px-12 md:pt-40 lg:px-20">
-        <p {...fade(0)} className={cn(fade(0).className, "text-xs uppercase tracking-[0.28em] text-muted-foreground")} style={fade(0).style}>
+        <p {...fade(0, "text-xs uppercase tracking-[0.28em] text-muted-foreground")}>
           Planeador interactivo
         </p>
         <div {...fade(100)} className="mt-4 max-w-3xl">
@@ -540,7 +540,7 @@ export function MiEventoClient() {
             </button>
           )}
         </div>
-        <p {...fade(200)} className={cn(fade(200).className, "mt-6 max-w-xl leading-relaxed text-muted-foreground")} style={fade(200).style}>
+        <p {...fade(200, "mt-6 max-w-xl leading-relaxed text-muted-foreground")}>
           Ponle nombre, elige la fecha y arma tu equipo de proveedores pieza por pieza. Todo se guarda automáticamente.
         </p>
       </div>

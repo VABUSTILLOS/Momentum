@@ -73,7 +73,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     if (stored) {
       setItems(
         stored.items
-          .map((item) => {
+          .map((item): EventItem | null => {
             const vendor = VENDORS.find((v) => v.id === item.vendorId);
             if (!vendor) return null;
             return { vendor, date: item.date ? new Date(item.date) : undefined };
