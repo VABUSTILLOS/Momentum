@@ -33,39 +33,37 @@ export function PhilosophySection() {
   return (
     <section id="products" className="bg-background">
       <div ref={sectionRef} className="relative" style={{ height: "200vh" }}>
-        <div className="sticky top-0 flex min-h-screen items-center justify-center overflow-hidden">
-          <div className="w-full">
-            <div className="mx-auto max-w-4xl px-6 text-center" style={{ opacity }}>
-              <h2 className="font-serif text-[12vw] leading-[0.95] tracking-tighter text-foreground md:text-[10vw] lg:text-[8vw]">
-                Celebra a tu manera.
-              </h2>
+        <div className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden">
+          <div className="mx-auto flex w-full max-w-4xl shrink-0 flex-col items-center justify-center px-6 pt-6 text-center md:pt-10" style={{ opacity }}>
+            <h2 className="font-serif text-[12vw] leading-[0.95] tracking-tighter text-foreground md:text-[10vw] lg:text-[8vw]">
+              Celebra a tu manera.
+            </h2>
+          </div>
+          <div
+            className="grid min-h-0 w-full flex-1 grid-cols-1 grid-rows-2 gap-4 px-6 pb-6 pt-4 md:grid-cols-2 md:grid-rows-1 md:px-12 md:pb-10 md:pt-6 lg:px-20"
+            style={{ transform: `translate3d(0, ${lift}px, 0)` }}
+          >
+            <div className="relative h-full min-h-0 w-full overflow-hidden rounded-2xl">
+              <Image
+                src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1400&q=85"
+                alt="Música y DJ para eventos"
+                fill
+                className="object-cover"
+              />
+              <span className="absolute bottom-6 left-6 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-md">
+                Música y DJ
+              </span>
             </div>
-            <div
-              className="mt-6 grid grid-cols-1 gap-4 px-6 md:mt-10 md:grid-cols-2 md:px-12 lg:px-20"
-              style={{ transform: `translate3d(0, ${lift}px, 0)` }}
-            >
-              <div className="relative aspect-[4/3] max-h-[38vh] overflow-hidden rounded-2xl md:max-h-none">
-                <Image
-                  src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1400&q=85"
-                  alt="Música y DJ para eventos"
-                  fill
-                  className="object-cover"
-                />
-                <span className="absolute bottom-6 left-6 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-md">
-                  Música y DJ
-                </span>
-              </div>
-              <div className="relative aspect-[4/3] max-h-[38vh] overflow-hidden rounded-2xl md:max-h-none">
-                <Image
-                  src="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1400&q=85"
-                  alt="Catering y banquetes"
-                  fill
-                  className="object-cover"
-                />
-                <span className="absolute bottom-6 left-6 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-md">
-                  Catering Premium
-                </span>
-              </div>
+            <div className="relative h-full min-h-0 w-full overflow-hidden rounded-2xl">
+              <Image
+                src="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1400&q=85"
+                alt="Catering y banquetes"
+                fill
+                className="object-cover"
+              />
+              <span className="absolute bottom-6 left-6 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-md">
+                Catering Premium
+              </span>
             </div>
           </div>
         </div>
