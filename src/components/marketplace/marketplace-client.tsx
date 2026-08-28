@@ -364,6 +364,7 @@ function QuickView({
 function MarketplaceInner() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") as VendorCategory | null;
+  const { items: cart, addItem } = useEvent();
 
   const [query, setQuery] = useState("");
   const [activeCategories, setActiveCategories] = useState<VendorCategory[]>(
@@ -376,8 +377,6 @@ function MarketplaceInner() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [quickView, setQuickView] = useState<Vendor | null>(null);
   const [quickViewOpen, setQuickViewOpen] = useState(false);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [cartOpen, setCartOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -435,11 +434,7 @@ function MarketplaceInner() {
   };
 
   const addToCart = (vendor: Vendor, date?: Date) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.vendor.id === vendor.id);
-      if (existing) return prev.map((i) => (i.vendor.id === vendor.id ? { vendor, date: date ?? i.date } : i));
-      return [...prev, { vendor, date }];
-    });
+    addItem(vendor, date);
     setQuickViewOpen(false);
     setToast(date ? "Fecha apartada en tu evento" : "Servicio agregado a tu evento");
   };
@@ -476,7 +471,7 @@ function MarketplaceInner() {
 
   return (
     <main className="min-h-screen bg-background">
-      <MarketplaceHeader cartCount={cart.length} onOpenCart={() => setCartOpen(true)} />
+      <MarketplaceHeader cartCount={cart.length} />
 
       {/* Page intro */}
       <div className="px-6 pb-10 pt-32 md:px-12 md:pt-40 lg:px-20">
@@ -677,14 +672,12 @@ function MarketplaceInner() {
       </Sheet>
 
       <QuickView vendor={quickView} open={quickViewOpen} onClose={() => setQuickViewOpen(false)} onAdd={addToCart} />
-      <CartDrawer items={cart} open={cartOpen} onClose={() => setCartOpen(false)} onRemove={(id) => setCart((prev) => prev.filter((i) => i.vendor.id !== id))} />
 
       {/* Mobile sticky cart bar */}
-      {cart.length > 0 && !cartOpen && (
+      {cart.length > 0 && (
         <div className="fixed inset-x-4 bottom-4 z-50 md:hidden">
-          <button
-            type="button"
-            onClick={() => setCartOpen(true)}
+          <Link
+            href="/mi-evento"
             className="flex w-full items-center justify-between rounded-full bg-foreground px-5 py-4 text-background shadow-2xl"
           >
             <span className="flex items-center gap-2.5 text-sm font-medium">
@@ -697,7 +690,7 @@ function MarketplaceInner() {
                 {formatMXN(apartadoDe(cart.reduce((sum, i) => sum + i.vendor.basePrice, 0)))}
               </span>
             </span>
-          </button>
+          </Link>
         </div>
       )}
 
@@ -708,16 +701,13 @@ function MarketplaceInner() {
           toast ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
         )}
       >
-        <button
-          type="button"
-          onClick={() => {
-            setToast(null);
-            setCartOpen(true);
-          }}
+        <Link
+          href="/mi-evento"
+          onClick={() => setToast(null)}
           className="flex items-center gap-2.5 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background shadow-2xl"
         >
-          <Check size={15} /> {toast} <span className="underline underline-offset-2">Ver</span>
-        </button>
+          <Check size={15} /> {toast} <span className="underline underline-offset-2">Ver mi evento</span>
+        </Link>
       </div>
     </main>
   );
