@@ -8,11 +8,27 @@ export interface EventItem {
   date?: Date;
 }
 
+export type EventType = "boda" | "xv" | "cumpleanos" | "corporativo" | "otro";
+
 export interface EventDetails {
   name: string;
+  type: EventType;
   date?: Date;
   guests: number;
   budget: number;
+}
+
+export interface WeddingSite {
+  partner1: string;
+  partner2: string;
+  hashtag: string;
+  message: string;
+  ceremonyVenue: string;
+  ceremonyTime: string;
+  receptionVenue: string;
+  receptionTime: string;
+  dressCode: string;
+  giftTable: string;
 }
 
 interface StoredItem {
@@ -24,20 +40,24 @@ interface StoredState {
   items: StoredItem[];
   details: {
     name: string;
+    type?: EventType;
     date?: string;
     guests: number;
     budget: number;
   };
+  wedding?: WeddingSite;
 }
 
 interface EventContextValue {
   items: EventItem[];
   details: EventDetails;
+  wedding: WeddingSite;
   hydrated: boolean;
   addItem: (vendor: Vendor, date?: Date) => void;
   removeItem: (vendorId: string) => void;
   updateItemDate: (vendorId: string, date?: Date) => void;
   updateDetails: (patch: Partial<EventDetails>) => void;
+  updateWedding: (patch: Partial<WeddingSite>) => void;
   clearEvent: () => void;
 }
 
@@ -47,9 +67,23 @@ const STORAGE_KEY = "momentum-mi-evento";
 
 const DEFAULT_DETAILS: EventDetails = {
   name: "",
+  type: "otro",
   date: undefined,
   guests: 100,
   budget: 150000,
+};
+
+export const DEFAULT_WEDDING: WeddingSite = {
+  partner1: "",
+  partner2: "",
+  hashtag: "",
+  message: "",
+  ceremonyVenue: "",
+  ceremonyTime: "",
+  receptionVenue: "",
+  receptionTime: "",
+  dressCode: "",
+  giftTable: "",
 };
 
 function loadStoredState(): StoredState | null {
@@ -66,6 +100,7 @@ function loadStoredState(): StoredState | null {
 export function EventProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<EventItem[]>([]);
   const [details, setDetails] = useState<EventDetails>(DEFAULT_DETAILS);
+  const [wedding, setWedding] = useState<WeddingSite>(DEFAULT_WEDDING);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -82,10 +117,12 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       );
       setDetails({
         name: stored.details.name ?? "",
+        type: stored.details.type ?? DEFAULT_DETAILS.type,
         date: stored.details.date ? new Date(stored.details.date) : undefined,
         guests: stored.details.guests ?? DEFAULT_DETAILS.guests,
         budget: stored.details.budget ?? DEFAULT_DETAILS.budget,
       });
+      if (stored.wedding) setWedding({ ...DEFAULT_WEDDING, ...stored.wedding });
     }
     setHydrated(true);
   }, []);
@@ -99,17 +136,19 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       })),
       details: {
         name: details.name,
+        type: details.type,
         date: details.date?.toISOString(),
         guests: details.guests,
         budget: details.budget,
       },
+      wedding,
     };
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
     } catch {
       // storage unavailable; event stays in memory
     }
-  }, [items, details, hydrated]);
+  }, [items, details, wedding, hydrated]);
 
   const addItem = useCallback((vendor: Vendor, date?: Date) => {
     setItems((prev) => {
@@ -133,14 +172,19 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     setDetails((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  const updateWedding = useCallback((patch: Partial<WeddingSite>) => {
+    setWedding((prev) => ({ ...prev, ...patch }));
+  }, []);
+
   const clearEvent = useCallback(() => {
     setItems([]);
     setDetails(DEFAULT_DETAILS);
+    setWedding(DEFAULT_WEDDING);
   }, []);
 
   const value = useMemo<EventContextValue>(
-    () => ({ items, details, hydrated, addItem, removeItem, updateItemDate, updateDetails, clearEvent }),
-    [items, details, hydrated, addItem, removeItem, updateItemDate, updateDetails, clearEvent]
+    () => ({ items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateDetails, updateWedding, clearEvent }),
+    [items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateDetails, updateWedding, clearEvent]
   );
 
   return <EventContext.Provider value={value}>{children}</EventContext.Provider>;

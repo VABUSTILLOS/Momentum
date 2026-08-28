@@ -11,6 +11,7 @@ import {
   Pencil,
   Plus,
   Sparkles,
+  Star,
   Sun,
   Trash2,
   Users,
@@ -23,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Slider } from "@/components/ui/slider";
 import { useEvent, type EventItem } from "@/lib/event-context";
 import { CATEGORIES, formatMXN, type Vendor } from "@/lib/marketplace-data";
+import { recommendVendors, type Recommendation } from "@/lib/recommendations";
 import { cn } from "@/lib/utils";
 
 const APARTADO_PCT = 0.1;
@@ -329,6 +331,85 @@ function ServicesSection({ items }: { items: EventItem[] }) {
   );
 }
 
+/* ----------------------------- Recomendaciones ----------------------------- */
+
+function RecommendationCard({ rec, index }: { rec: Recommendation; index: number }) {
+  const { addItem, details } = useEvent();
+  const { vendor } = rec;
+
+  return (
+    <article
+      className="flex animate-fade-in flex-col overflow-hidden rounded-2xl border border-border opacity-0"
+      style={{ animationDelay: `${index * 70}ms`, animationFillMode: "forwards" }}
+    >
+      <div className="relative h-36 bg-secondary">
+        <FadeImage src={vendor.images[0]} alt={vendor.name} fill className="object-cover" />
+        {rec.reasons[0] && (
+          <span className="absolute left-3 top-3 rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
+            {rec.reasons[0]}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{vendor.categoryLabel}</p>
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground">
+            <Star size={12} className="fill-foreground" aria-hidden="true" />
+            {vendor.rating.toFixed(1)}
+          </span>
+        </div>
+        <p className="text-sm font-medium leading-snug text-foreground">{vendor.name}</p>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+          <span className="text-sm font-semibold text-foreground">
+            {formatMXN(vendor.basePrice)}
+            <span className="ml-1 text-xs font-normal text-muted-foreground">{vendor.priceUnit}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => addItem(vendor, details.date)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3.5 py-2 text-xs font-medium text-background transition-opacity hover:opacity-90"
+          >
+            <Plus size={13} />
+            Agregar
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function RecommendationsSection({ items }: { items: EventItem[] }) {
+  const { details } = useEvent();
+  const recommendations = useMemo(() => recommendVendors(items, details), [items, details]);
+
+  if (recommendations.length === 0) return null;
+
+  return (
+    <section {...fade(350)}>
+      <div className="flex items-center justify-between">
+        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
+          <Sparkles size={14} /> Recomendados para tu evento
+        </p>
+        <Link
+          href="/marketplace"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          Ver todos <ArrowRight size={13} />
+        </Link>
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Según tu fecha{details.date ? "" : " (elígela arriba)"}, {details.guests} invitados y presupuesto de{" "}
+        {formatMXN(details.budget)}.
+      </p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {recommendations.map((rec, i) => (
+          <RecommendationCard key={rec.vendor.id} rec={rec} index={i} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /* ------------------------------- Presupuesto ------------------------------- */
 
 function BudgetPanel({ items }: { items: EventItem[] }) {
@@ -565,6 +646,7 @@ export function MiEventoClient() {
               </div>
             </>
           )}
+          <RecommendationsSection items={items} />
         </div>
       )}
     </main>
