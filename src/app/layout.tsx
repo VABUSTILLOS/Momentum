@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
+import { EventProvider } from '@/lib/event-context'
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 
@@ -39,7 +40,7 @@ export default function RootLayout({
     <html lang="es" className="bg-background">
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
-          {children}
+          <EventProvider>{children}</EventProvider>
         </ThemeProvider>
         <Analytics />
       </body>

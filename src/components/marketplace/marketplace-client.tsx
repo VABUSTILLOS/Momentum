@@ -16,7 +16,6 @@ import {
   SlidersHorizontal,
   Star,
   Sun,
-  Trash2,
   X,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -29,6 +28,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useEvent } from "@/lib/event-context";
 import {
   CATEGORIES,
   PRICE_RANGES,
@@ -51,14 +51,9 @@ const SORTS: { id: SortId; label: string }[] = [
 const APARTADO_PCT = 0.10;
 const apartadoDe = (v: number) => Math.round(v * APARTADO_PCT);
 
-interface CartItem {
-  vendor: Vendor;
-  date?: Date;
-}
-
 /* ---------------------------------- Header --------------------------------- */
 
-function MarketplaceHeader({ cartCount, onOpenCart }: { cartCount: number; onOpenCart: () => void }) {
+function MarketplaceHeader({ cartCount }: { cartCount: number }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -100,9 +95,8 @@ function MarketplaceHeader({ cartCount, onOpenCart }: { cartCount: number; onOpe
           >
             {mounted && resolvedTheme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
           </button>
-          <button
-            type="button"
-            onClick={onOpenCart}
+          <Link
+            href="/mi-evento"
             className="relative inline-flex items-center gap-2 rounded-full bg-background px-5 py-2 text-sm font-medium text-foreground hover:bg-background/90"
           >
             <ShoppingBag size={16} />
@@ -112,7 +106,7 @@ function MarketplaceHeader({ cartCount, onOpenCart }: { cartCount: number; onOpe
                 {cartCount}
               </span>
             )}
-          </button>
+          </Link>
         </div>
       </div>
     </header>
@@ -356,158 +350,10 @@ function QuickView({
               onClick={() => onAdd(vendor, undefined)}
               className="rounded-full border border-border px-5 py-3 text-sm font-medium text-foreground hover:bg-secondary"
             >
-              + Mi evento
+              Agregar a mi Evento
             </button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-/* --------------------------------- Cart ------------------------------------ */
-
-function CartDrawer({
-  items,
-  open,
-  onClose,
-  onRemove,
-}: {
-  items: CartItem[];
-  open: boolean;
-  onClose: () => void;
-  onRemove: (id: string) => void;
-}) {
-  const [sent, setSent] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const total = items.reduce((sum, item) => sum + item.vendor.basePrice, 0);
-
-  useEffect(() => {
-    if (!open) setSent(false);
-  }, [open]);
-
-  return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="flex w-full flex-col bg-background p-0 sm:max-w-md">
-        <SheetHeader className="border-b border-border px-6 py-5 text-left">
-          <SheetTitle className="font-serif text-2xl font-medium tracking-tight text-foreground">
-            Mi evento <span className="font-sans text-sm font-normal text-muted-foreground">({items.length} servicios)</span>
-          </SheetTitle>
-        </SheetHeader>
-
-        {sent ? (
-          <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-            <span className="inline-flex size-14 items-center justify-center rounded-full bg-foreground text-background">
-              <Check size={24} />
-            </span>
-            <h3 className="mt-6 font-serif text-3xl font-medium tracking-tight text-foreground">Cotización en camino.</h3>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Recibimos tu solicitud consolidada. Un coordinador de Momentum te contactará en menos de 24 horas para confirmar
-              disponibilidad y apartado.
-            </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-8 rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background hover:opacity-90"
-            >
-              Seguir explorando
-            </button>
-          </div>
-        ) : items.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-            <ShoppingBag size={32} className="text-muted-foreground" />
-            <p className="mt-4 font-serif text-2xl font-medium text-foreground">Tu evento empieza aquí.</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Agrega música, catering, fotografía y más para cotizar todo en un solo paso.
-            </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-6 rounded-full border border-border px-6 py-3 text-sm font-medium text-foreground hover:bg-secondary"
-            >
-              Explorar servicios
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              <ul className="flex flex-col divide-y divide-border">
-                {items.map((item) => (
-                  <li key={item.vendor.id} className="flex gap-4 py-4">
-                    <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-secondary">
-                      <FadeImage src={item.vendor.images[0]} alt={item.vendor.name} fill className="object-cover" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{item.vendor.categoryLabel}</p>
-                      <p className="truncate text-sm font-medium text-foreground">{item.vendor.name}</p>
-                      {item.date && (
-                        <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <CalendarDays size={11} />
-                          {item.date.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end justify-between">
-                      <span className="text-sm font-medium text-foreground">{formatMXN(item.vendor.basePrice)}</span>
-                      <button
-                        type="button"
-                        onClick={() => onRemove(item.vendor.id)}
-                        className="text-muted-foreground hover:text-destructive"
-                        aria-label={`Quitar ${item.vendor.name}`}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="border-t border-border px-6 py-5">
-              <div className="flex items-baseline justify-between">
-                <span className="text-sm text-muted-foreground">Estimado base</span>
-                <span className="font-serif text-2xl font-medium text-foreground">{formatMXN(total)}</span>
-              </div>
-              <div className="mt-2 flex items-baseline justify-between rounded-xl bg-secondary px-4 py-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Apartado hoy (10%)</span>
-                <span className="text-base font-semibold text-foreground">{formatMXN(apartadoDe(total))}</span>
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                Así funciona Momentum: apartas a todos tus proveedores con solo el 10% y liquidas el resto directo con cada
-                proveedor. El precio final se confirma en la cotización consolidada.
-              </p>
-              <form
-                className="mt-4 flex flex-col gap-3"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (name.trim() && email.trim()) setSent(true);
-                }}
-              >
-                <input
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Tu nombre"
-                  className="w-full rounded-full border border-border bg-background px-5 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-                <input
-                  required
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Correo electrónico"
-                  className="w-full rounded-full border border-border bg-background px-5 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-                <button
-                  type="submit"
-                  className="rounded-full bg-foreground px-5 py-3.5 text-sm font-medium text-background hover:opacity-90"
-                >
-                  Solicitar cotización consolidada
-                </button>
-              </form>
-            </div>
-          </>
-        )}
       </SheetContent>
     </Sheet>
   );
