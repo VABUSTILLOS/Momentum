@@ -254,7 +254,7 @@ export function AlbumSection() {
               </button>
               {(p.name || p.caption) && (
                 <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-8 text-left">
-                  {p.caption && <p className="text-xs font-medium text-white">{p.caption}</p>}
+                  {p.caption && <p className="whitespace-pre-line break-words text-xs font-medium leading-relaxed text-white">{p.caption}</p>}
                   {p.name && <p className="text-[10px] uppercase tracking-[0.14em] text-white/75">{p.name}</p>}
                 </figcaption>
               )}

@@ -1,7 +1,40 @@
 import { useEffect, useRef, useState } from "react";
+import { Fragment } from "react";
 import { animate, motion, useReducedMotion } from "framer-motion";
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
+
+/* Texto libre del usuario: respeta saltos de línea (\n → <br>, \n\n → párrafo nuevo). */
+export function MultilineText({
+  text,
+  className,
+  paragraphClassName,
+  ...rest
+}: { text: string; paragraphClassName?: string } & HTMLAttributes<HTMLDivElement>) {
+  const trimmed = text.trim();
+  if (!trimmed.includes("\n")) {
+    return (
+      <p className={cn("break-words", className, paragraphClassName)} {...(rest as HTMLAttributes<HTMLParagraphElement>)}>
+        {trimmed}
+      </p>
+    );
+  }
+  const paragraphs = trimmed.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  return (
+    <div className={cn("break-words", className)} {...rest}>
+      {paragraphs.map((p, i) => (
+        <p key={i} className={cn(i > 0 && "mt-4", paragraphClassName)}>
+          {p.split("\n").map((line, j) => (
+            <Fragment key={j}>
+              {j > 0 && <br />}
+              {line}
+            </Fragment>
+          ))}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 /* Revelado escalonado que respeta prefers-reduced-motion: fade + lift 8px con spring suave. */
 export function FadeUp({
@@ -83,7 +116,7 @@ export function SectionHeading({
       )}
       <h2
         className={cn(
-          "font-serif text-3xl font-medium tracking-tight text-foreground md:text-5xl",
+          "font-serif text-3xl font-medium tracking-tight text-balance text-foreground md:text-5xl",
           eyebrow && "mt-4",
         )}
       >

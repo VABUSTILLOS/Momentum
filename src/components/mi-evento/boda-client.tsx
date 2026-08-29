@@ -45,7 +45,7 @@ import { FadeImage } from "@/components/fade-image";
 import { AlbumSection } from "@/components/mi-evento/album-section";
 import { isWeddingDay } from "@/lib/album";
 import { CommandPalette, PaletteButton, usePaletteHotkey, type PaletteGroup } from "@/components/mi-evento/command-palette";
-import { FadeUp, Magnetic, OrnamentDivider, SectionHeading, Tilt } from "@/components/mi-evento/editorial";
+import { FadeUp, Magnetic, MultilineText, OrnamentDivider, SectionHeading, Tilt } from "@/components/mi-evento/editorial";
 import { QrInvitationSheet } from "@/components/mi-evento/qr-invitation";
 import {
   Accordion,
@@ -469,6 +469,7 @@ function EditField({
 }) {
   const inputClass =
     "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+  const minRows = Math.max(3, value.split("\n").length + 1);
   return (
     <label className="flex flex-col gap-1.5">
       <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -484,13 +485,19 @@ function EditField({
         )}
       </span>
       {textarea ? (
-        <textarea
-          rows={3}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={cn(inputClass, "resize-none")}
-        />
+        <>
+          <textarea
+            rows={Math.min(minRows, 12)}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className={cn(inputClass, "resize-none text-base leading-relaxed")}
+          />
+          <span className="flex items-center justify-between text-[11px] text-muted-foreground/80">
+            <span>Enter = salto de línea · dos Enters = nuevo párrafo</span>
+            {value.length > 0 && <span>{value.length} caracteres</span>}
+          </span>
+        </>
       ) : (
         <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={inputClass} />
       )}
@@ -1182,7 +1189,7 @@ function HeroSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => 
           </p>
         )}
         <h1
-          {...fade(150, "mt-6 break-words px-4 font-serif text-[clamp(2.75rem,11vw,7rem)] font-medium leading-[0.95] tracking-tight sm:px-0")}
+          {...fade(150, "mt-6 break-words text-balance px-4 font-serif text-[clamp(2.75rem,11vw,7rem)] font-medium leading-[0.95] tracking-tight sm:px-0")}
         >
           {names.p1}
           <span className="mx-3 font-light italic text-[#e7c887] md:mx-5">&</span>
@@ -1232,7 +1239,11 @@ function WelcomeSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () 
         <Heart size={20} className="fill-current" />
       </span>
       <SectionHeading {...fade(100, "mt-6")} eyebrow="Con todo el corazón" title="Bienvenidos a nuestra boda" />
-      <p {...fade(200, "mt-6 leading-relaxed text-muted-foreground")}>{message}</p>
+      <MultilineText
+        {...fade(200, "mx-auto mt-6 max-w-prose leading-relaxed text-foreground/75")}
+        text={message}
+        paragraphClassName={message.length > 160 || message.includes("\n") ? "text-pretty text-left" : "text-pretty"}
+      />
       {wedding.hashtag.trim() && (
         <p {...fade(300, "mt-6 font-serif text-xl italic text-foreground")}>{wedding.hashtag}</p>
       )}
@@ -1319,7 +1330,7 @@ function StorySection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () =>
             </span>
             <FadeUp index={i}>
               <p className="font-serif text-xl font-medium tracking-tight text-foreground">{m.title}</p>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{m.text}</p>
+              <MultilineText text={m.text} className="mt-2 max-w-prose text-pretty text-base leading-relaxed text-foreground/75" />
             </FadeUp>
           </li>
         ))}
@@ -1462,7 +1473,7 @@ function AccommodationSection({ wedding, onEdit }: { wedding: WeddingSite; onEdi
           <p {...fade(200, "mt-4 text-base font-medium text-foreground")}>{wedding.accommodation}</p>
         )}
         {hasNote && (
-          <p {...fade(250, "mt-2 text-sm leading-relaxed text-muted-foreground")}>{wedding.accommodationNote}</p>
+          <MultilineText {...fade(250, "mt-2 max-w-prose text-base leading-relaxed text-foreground/75 text-pretty")} text={wedding.accommodationNote} />
         )}
         {hasHotel && (
           <a
@@ -1641,8 +1652,8 @@ function FaqSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => v
             <AccordionTrigger className="text-left font-serif text-lg font-medium tracking-tight">
               {faq.q}
             </AccordionTrigger>
-            <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
-              {faq.a.trim() || "Pronto tendrás la respuesta aquí."}
+            <AccordionContent className="max-w-prose text-base leading-relaxed text-foreground/75">
+              <MultilineText text={faq.a.trim() || "Pronto tendrás la respuesta aquí."} className="text-pretty" />
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -1758,10 +1769,10 @@ function WishesSection({ wedding }: { wedding: WeddingSite }) {
                     {initials(wish.name)}
                   </span>
                   <div className="min-w-0">
-                    <blockquote className="font-serif text-base italic leading-relaxed text-foreground">
-                      “{wish.message}”
+                    <blockquote className="max-w-prose text-pretty font-serif text-base italic leading-relaxed text-foreground">
+                      <MultilineText text={`“${wish.message}”`} />
                     </blockquote>
-                    <figcaption className="mt-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                    <figcaption className="mt-2 text-xs uppercase tracking-[0.14em] text-foreground/60">
                       {wish.name} · {relativeTime(wish.at)}
                     </figcaption>
                   </div>
@@ -2135,9 +2146,10 @@ function RsvpSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open:
                       {r.attending === "si" && r.companions > 0 && ` · +${r.companions} ${r.companions === 1 ? "acompañante" : "acompañantes"}`}
                     </p>
                     {r.allergies && (
-                      <p className="mt-1.5 rounded-lg bg-secondary px-2.5 py-1.5 text-xs text-muted-foreground">
-                        {r.allergies}
-                      </p>
+                      <MultilineText
+                        text={r.allergies}
+                        className="mt-1.5 rounded-lg bg-secondary px-2.5 py-1.5 text-xs text-muted-foreground"
+                      />
                     )}
                   </li>
                 ))}

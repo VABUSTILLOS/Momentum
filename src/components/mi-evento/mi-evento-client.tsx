@@ -851,23 +851,27 @@ function ItemNoteEditor({ item }: { item: EventItem }) {
 
   if (editing) {
     return (
-      <input
-        autoFocus
-        defaultValue={item.note ?? ""}
-        placeholder="Ej. pedir paquete con saxofonista"
-        onBlur={(e) => {
-          updateItemNote(item.vendor.id, e.target.value.trim());
-          setEditing(false);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === "Escape") {
-            updateItemNote(item.vendor.id, e.currentTarget.value.trim());
+      <div>
+        <textarea
+          autoFocus
+          rows={2}
+          defaultValue={item.note ?? ""}
+          placeholder={"Ej. pedir paquete con saxofonista\nEnter = salto de línea · Esc = cancelar"}
+          onBlur={(e) => {
+            updateItemNote(item.vendor.id, e.target.value.trim());
             setEditing(false);
-          }
-        }}
-        className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
-        aria-label={`Nota para ${item.vendor.name}`}
-      />
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              updateItemNote(item.vendor.id, e.currentTarget.value.trim());
+              setEditing(false);
+            }
+          }}
+          className="w-full resize-none rounded-lg border border-border bg-background px-3 py-1.5 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
+          aria-label={`Nota para ${item.vendor.name}`}
+        />
+        <p className="mt-1 text-[10px] text-muted-foreground/70">Enter = salto de línea · se guarda al salir</p>
+      </div>
     );
   }
 
@@ -878,7 +882,7 @@ function ItemNoteEditor({ item }: { item: EventItem }) {
       className="hit-44 group inline-flex min-h-10 items-center gap-1.5 text-left text-xs text-muted-foreground hover:text-foreground"
     >
       <Pencil size={11} className="shrink-0" />
-      <span className={cn("truncate", item.note && "italic")}>{item.note || "Agregar nota"}</span>
+      <span className={cn("whitespace-pre-line break-words line-clamp-2", item.note && "italic")}>{item.note || "Agregar nota"}</span>
     </button>
   );
 }
@@ -1174,7 +1178,7 @@ function CompareSheet({
                   {vendors.map((v) => {
                     const note = items.find((i) => i.vendor.id === v.id)?.note;
                     return (
-                      <td key={v.id} className="text-xs text-muted-foreground">
+                      <td key={v.id} className="whitespace-pre-line break-words align-top text-xs leading-relaxed text-muted-foreground">
                         {note?.trim() || "—"}
                       </td>
                     );
