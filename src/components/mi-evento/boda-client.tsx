@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -877,10 +877,9 @@ function RsvpSection({ wedding }: { wedding: WeddingSite }) {
                 onClick={() => setAttending(opt.id)}
                 className={cn(
                   "rounded-full px-4 py-3 text-sm font-medium transition-colors",
-                  attending === opt.id
-                    ? "bg-foreground text-background"
-                    : "border border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+                  attending !== opt.id && "border border-border text-muted-foreground hover:border-foreground hover:text-foreground"
                 )}
+                style={attending === opt.id ? { backgroundColor: "var(--wed-accent)", color: "#fff" } : undefined}
               >
                 {opt.label}
               </button>
@@ -888,7 +887,8 @@ function RsvpSection({ wedding }: { wedding: WeddingSite }) {
           </div>
           <button
             type="submit"
-            className="rounded-full bg-foreground px-5 py-3.5 text-sm font-medium text-background transition-opacity hover:opacity-90"
+            className="rounded-full px-5 py-3.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "var(--wed-accent)" }}
           >
             Confirmar asistencia
           </button>
@@ -905,6 +905,7 @@ function DotNav() {
     { id: "inicio", label: "Inicio" },
     { id: "historia", label: "Historia" },
     { id: "detalles", label: "Detalles" },
+    { id: "itinerario", label: "Itinerario" },
     { id: "regalos", label: "Regalos" },
     { id: "rsvp", label: "RSVP" },
   ];
@@ -939,6 +940,7 @@ export function BodaClient() {
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<string | null>(null);
   const names = coupleNames(wedding);
+  const theme = THEMES[wedding.theme] ?? THEMES.arena;
 
   const openEdit = (target: string) => {
     setEditTarget(target);
@@ -954,19 +956,23 @@ export function BodaClient() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <BodaToolbar onEdit={() => openEdit("edit-pareja")} />
+    <main
+      className="min-h-screen bg-background"
+      style={{ "--wed-accent": theme.accent, "--wed-soft": theme.soft } as CSSProperties}
+    >
+      <BodaToolbar onEdit={() => openEdit("edit-portada")} />
       <DotNav />
       <EditSheet open={editOpen} onOpenChange={setEditOpen} target={editTarget} />
-      <HeroSection wedding={wedding} onEdit={() => openEdit("edit-pareja")} />
+      <HeroSection wedding={wedding} onEdit={() => openEdit("edit-portada")} />
       <WelcomeSection wedding={wedding} onEdit={() => openEdit("edit-mensaje")} />
-      <GallerySection />
+      <GallerySection wedding={wedding} onEdit={() => openEdit("edit-galeria")} />
       <StorySection wedding={wedding} onEdit={() => openEdit("edit-historia")} />
       <DetailsGrid
         wedding={wedding}
         onEditCeremony={() => openEdit("edit-ceremonia")}
         onEditReception={() => openEdit("edit-recepcion")}
       />
+      <ItinerarySection wedding={wedding} onEdit={() => openEdit("edit-itinerario")} />
       <GiftSection wedding={wedding} onEdit={() => openEdit("edit-extras")} />
       <RsvpSection wedding={wedding} />
       <footer className="border-t border-border px-6 py-10 text-center">
