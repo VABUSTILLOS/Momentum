@@ -36,7 +36,6 @@ import {
   Sun,
   Trash2,
   Trophy,
-  Undo2,
   Upload,
   Users,
   UtensilsCrossed,
@@ -44,8 +43,15 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { FadeImage } from "@/components/fade-image";
-import { CountUp, SectionLabel } from "@/components/mi-evento/editorial";
+import { CommandPalette, PaletteButton, usePaletteHotkey, type PaletteGroup } from "@/components/mi-evento/command-palette";
+import { CountUp, FadeUp, Magnetic, SectionLabel, Tilt } from "@/components/mi-evento/editorial";
+import { WelcomeTour, openTour } from "@/components/mi-evento/welcome-tour";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Toaster } from "@/components/ui/sonner";
+import { useIsMobile } from "@/components/ui/use-mobile";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -178,7 +184,7 @@ function ItemStatusChip({ item }: { item: EventItem }) {
       onClick={() => updateItemStatus(item.vendor.id, next)}
       title={`Cambiar a "${STATUS_META[next].label}"`}
       className={cn(
-        "inline-flex w-fit items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium transition-colors",
+        "hit-44 inline-flex w-fit min-h-10 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium transition-colors",
         meta.className,
       )}
     >
@@ -249,7 +255,7 @@ function PlanningProgress({ items }: { items: EventItem[] }) {
 
 /* ---------------------------------- Header --------------------------------- */
 
-function MiEventoHeader({ count }: { count: number }) {
+function MiEventoHeader({ count, onOpenPalette }: { count: number; onOpenPalette: () => void }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
@@ -275,36 +281,41 @@ function MiEventoHeader({ count }: { count: number }) {
         <div className="flex items-center gap-4">
           <Link
             href="/marketplace"
-            className="inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
+            className="hit-44 inline-flex size-10 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
             aria-label="Volver al marketplace"
           >
             <ArrowLeft size={16} />
           </Link>
           <Link href="/mi-evento" className="flex items-baseline gap-2 font-serif text-xl tracking-tight text-background">
-            Momentum <span className="font-sans text-[10px] uppercase tracking-[0.18em] opacity-70">Mi Evento</span>
+            Momentum{" "}
+            <span className="hidden font-sans text-[10px] uppercase tracking-[0.18em] opacity-70 sm:inline">Mi Evento</span>
           </Link>
         </div>
         <div className="flex items-center gap-3">
+          <PaletteButton dark onClick={onOpenPalette} />
           <button
             type="button"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
+            className="hit-44 inline-flex size-10 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
             aria-label={mounted && resolvedTheme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
           >
             {mounted && resolvedTheme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
           </button>
-          <Link
-            href="/marketplace"
-            className="relative inline-flex items-center gap-2 rounded-full bg-background px-5 py-2 text-sm font-medium text-foreground hover:bg-background/90"
-          >
-            <Plus size={16} />
-            <span className="hidden sm:inline">Explorar servicios</span>
-            {count > 0 && (
-              <span className="absolute -right-1 -top-1 inline-flex size-5 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background ring-2 ring-background">
-                {count}
-              </span>
-            )}
-          </Link>
+          <Magnetic>
+            <Link
+              id="me-cta-explorar"
+              href="/marketplace"
+              className="hit-44 inline-flex min-h-11 items-center gap-2 rounded-full bg-background px-4 text-sm font-medium text-foreground hover:bg-background/90 sm:px-5"
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">Explorar servicios</span>
+              {count > 0 && (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-foreground px-1.5 py-0.5 text-[10px] font-semibold text-background">
+                  {count}
+                </span>
+              )}
+            </Link>
+          </Magnetic>
         </div>
       </div>
     </header>
@@ -412,7 +423,10 @@ function SectionNav({ show }: { show: boolean }) {
   ];
   return (
     <nav
-      {...fade(200, "sticky top-24 z-40 mx-auto flex w-fit gap-1 rounded-full border border-border bg-background/80 p-1.5 shadow-[0_20px_60px_-30px_rgba(28,25,23,0.4)] backdrop-blur-xl")}
+      {...fade(
+        200,
+        "sticky top-24 z-40 mx-auto flex w-full max-w-md gap-1 overflow-x-auto scrollbar-hide rounded-full border border-border bg-background/80 p-1.5 shadow-[0_20px_60px_-30px_rgba(28,25,23,0.4)] backdrop-blur-xl sm:w-fit sm:max-w-none"
+      )}
       aria-label="Secciones de tu evento"
     >
       {links.map((l) => (
@@ -420,7 +434,7 @@ function SectionNav({ show }: { show: boolean }) {
           key={l.id}
           type="button"
           onClick={() => document.getElementById(l.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          className="rounded-full px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          className="hit-44 shrink-0 rounded-full px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         >
           {l.label}
         </button>
@@ -446,7 +460,7 @@ function EventDatePicker({ date, onChange }: { date?: Date; onChange: (d?: Date)
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="mt-3 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary"
+          className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium text-foreground hover:bg-secondary"
         >
           <CalendarDays size={15} />
           {date
@@ -486,7 +500,7 @@ function DetailsSection() {
                 type="button"
                 onClick={() => updateDetails({ type: t.id })}
                 className={cn(
-                  "rounded-full px-3.5 py-2 text-xs font-medium transition-colors",
+                  "hit-44 rounded-full px-3.5 py-2 text-xs font-medium transition-colors",
                   details.type === t.id
                     ? "bg-foreground text-background"
                     : "border border-border text-muted-foreground hover:border-foreground hover:text-foreground"
@@ -561,16 +575,14 @@ function DetailsSection() {
 
 function WeddingCTA() {
   const { wedding, details, items } = useEvent();
-  const [copied, setCopied] = useState(false);
 
   const copyGuestLink = async () => {
     try {
       const code = encodeWeddingShare(wedding, details);
       await navigator.clipboard.writeText(`${window.location.origin}/mi-evento/boda#s=${code}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      toast.success("Enlace para invitados copiado");
     } catch {
-      // clipboard unavailable
+      toast.error("No pudimos copiar el enlace");
     }
   };
 
@@ -590,7 +602,7 @@ function WeddingCTA() {
   ];
 
   return (
-    <section {...fade(250)}>
+    <section {...fade(250)} id="me-cta-boda" className="scroll-mt-32">
       <Link
         href="/mi-evento/boda"
         className="group flex flex-col gap-6 rounded-3xl bg-foreground p-8 text-background transition-shadow hover:shadow-2xl sm:flex-row sm:items-center sm:justify-between md:p-10"
@@ -683,11 +695,11 @@ function WeddingCTA() {
         <button
           type="button"
           onClick={copyGuestLink}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+          className="hit-44 inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
           title="Copia el enlace de la página de tu boda para compartirlo con tus invitados"
         >
-          {copied ? <Check size={12} /> : <Link2 size={12} />}
-          {copied ? "¡Enlace copiado!" : "Copiar enlace para invitados"}
+          <Link2 size={12} aria-hidden="true" />
+          Copiar enlace para invitados
         </button>
       </div>
     </section>
@@ -807,7 +819,7 @@ function ItemDateEditor({ item }: { item: EventItem }) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary"
+          className="hit-44 inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-foreground hover:bg-secondary"
         >
           <CalendarDays size={12} />
           {item.date
@@ -863,7 +875,7 @@ function ItemNoteEditor({ item }: { item: EventItem }) {
     <button
       type="button"
       onClick={() => setEditing(true)}
-      className="group inline-flex items-center gap-1.5 text-left text-xs text-muted-foreground hover:text-foreground"
+      className="hit-44 group inline-flex min-h-10 items-center gap-1.5 text-left text-xs text-muted-foreground hover:text-foreground"
     >
       <Pencil size={11} className="shrink-0" />
       <span className={cn("truncate", item.note && "italic")}>{item.note || "Agregar nota"}</span>
@@ -990,44 +1002,45 @@ function ServicesSection({ items, onRemoveItem, compareIds, onToggleCompare }: {
             </p>
             <ul className="flex flex-col gap-3">
               {group.items.map((item, i) => (
-                <li
-                  key={item.vendor.id}
-                  className="card-lift flex animate-fade-in flex-col gap-4 rounded-2xl border border-border p-4 opacity-0 sm:flex-row sm:items-center"
-                  style={{ animationDelay: `${400 + i * 70}ms`, animationFillMode: "forwards" }}
-                >
-                  <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-secondary sm:h-20 sm:w-24">
-                    <FadeImage src={item.vendor.images[0]} alt={item.vendor.name} fill className="object-cover" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-medium text-foreground">{item.vendor.name}</p>
-                    <div className="mt-1.5">
-                      <ItemDateEditor item={item} />
+                <li key={item.vendor.id} className="block">
+                  <FadeUp
+                    index={i}
+                    className="card-lift flex flex-col gap-4 rounded-2xl border border-border p-4 sm:flex-row sm:items-center"
+                  >
+                    <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-secondary sm:h-20 sm:w-24">
+                      <FadeImage src={item.vendor.images[0]} alt={item.vendor.name} fill className="object-cover" />
                     </div>
-                    <div className="mt-1.5">
-                      <ItemNoteEditor item={item} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-base font-medium text-foreground">{item.vendor.name}</p>
+                      <div className="mt-1.5">
+                        <ItemDateEditor item={item} />
+                      </div>
+                      <div className="mt-1.5">
+                        <ItemNoteEditor item={item} />
+                      </div>
+                      <div className="mt-2">
+                        <ItemStatusChip item={item} />
+                      </div>
+                      <ItemDeadlineChip item={item} />
                     </div>
-                    <div className="mt-2">
-                      <ItemStatusChip item={item} />
+                    <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2.5 sm:w-auto sm:flex-col sm:items-end">
+                      <span className="text-sm font-semibold text-foreground">{formatMXN(item.vendor.basePrice)}</span>
+                      <CompareToggle
+                        active={compareIds.includes(item.vendor.id)}
+                        disabled={compareIds.length >= MAX_COMPARE}
+                        onToggle={() => onToggleCompare(item.vendor)}
+                        label={item.vendor.name}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onRemoveItem(item)}
+                        className="hit-44 inline-flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive"
+                        aria-label={`Quitar ${item.vendor.name}`}
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
-                    <ItemDeadlineChip item={item} />
-                  </div>
-                  <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2.5 sm:w-auto sm:flex-col sm:items-end">
-                    <span className="text-sm font-semibold text-foreground">{formatMXN(item.vendor.basePrice)}</span>
-                    <CompareToggle
-                      active={compareIds.includes(item.vendor.id)}
-                      disabled={compareIds.length >= MAX_COMPARE}
-                      onToggle={() => onToggleCompare(item.vendor)}
-                      label={item.vendor.name}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => onRemoveItem(item)}
-                      className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive"
-                      aria-label={`Quitar ${item.vendor.name}`}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+                  </FadeUp>
                 </li>
               ))}
             </ul>
@@ -1053,7 +1066,7 @@ function CompareToggle({ active, disabled, onToggle, label }: { active: boolean;
       disabled={!active && disabled}
       aria-pressed={active}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+        "hit-44 inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors",
         active
           ? "border-foreground bg-foreground text-background"
           : "border-border text-muted-foreground hover:border-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
@@ -1259,51 +1272,52 @@ function RecommendationCard({ rec, index, compareIds, onToggleCompare }: { rec: 
   const { vendor } = rec;
 
   return (
-    <article
-      className="card-lift flex animate-fade-in flex-col overflow-hidden rounded-2xl border border-border opacity-0"
-      style={{ animationDelay: `${index * 70}ms`, animationFillMode: "forwards" }}
-    >
-      <div className="relative h-36 bg-secondary">
-        <FadeImage src={vendor.images[0]} alt={vendor.name} fill className="object-cover" />
-        {rec.reasons[0] && (
-          <span className="absolute left-3 top-3 rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
-            {rec.reasons[0]}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{vendor.categoryLabel}</p>
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground">
-            <Star size={12} className="fill-foreground" aria-hidden="true" />
-            {vendor.rating.toFixed(1)}
-          </span>
+    <FadeUp index={index} className="h-full">
+      <Tilt className="h-full">
+        <article className="card-lift flex h-full flex-col overflow-hidden rounded-2xl border border-border">
+        <div className="relative h-36 bg-secondary">
+          <FadeImage src={vendor.images[0]} alt={vendor.name} fill className="object-cover" />
+          {rec.reasons[0] && (
+            <span className="absolute left-3 top-3 rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
+              {rec.reasons[0]}
+            </span>
+          )}
         </div>
-        <p className="text-sm font-medium leading-snug text-foreground">{vendor.name}</p>
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <span className="text-sm font-semibold text-foreground">
-            {formatMXN(vendor.basePrice)}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">{vendor.priceUnit}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => addItem(vendor, details.date)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3.5 py-2 text-xs font-medium text-background transition-opacity hover:opacity-90"
-          >
-            <Plus size={13} />
-            Agregar
-          </button>
+        <div className="flex flex-1 flex-col gap-2 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{vendor.categoryLabel}</p>
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground">
+              <Star size={12} className="fill-foreground" aria-hidden="true" />
+              {vendor.rating.toFixed(1)}
+            </span>
+          </div>
+          <p className="text-sm font-medium leading-snug text-foreground">{vendor.name}</p>
+          <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+            <span className="text-sm font-semibold text-foreground">
+              {formatMXN(vendor.basePrice)}
+              <span className="ml-1 text-xs font-normal text-muted-foreground">{vendor.priceUnit}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => addItem(vendor, details.date)}
+              className="hit-44 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-foreground px-4 text-xs font-medium text-background transition-opacity hover:opacity-90"
+            >
+              <Plus size={13} />
+              Agregar
+            </button>
+          </div>
+          <div className="pt-1.5">
+            <CompareToggle
+              active={compareIds.includes(vendor.id)}
+              disabled={compareIds.length >= MAX_COMPARE}
+              onToggle={() => onToggleCompare(vendor)}
+              label={vendor.name}
+            />
+          </div>
         </div>
-        <div className="pt-1.5">
-          <CompareToggle
-            active={compareIds.includes(vendor.id)}
-            disabled={compareIds.length >= MAX_COMPARE}
-            onToggle={() => onToggleCompare(vendor)}
-            label={vendor.name}
-          />
-        </div>
-      </div>
-    </article>
+      </article>
+      </Tilt>
+    </FadeUp>
   );
 }
 
@@ -1343,7 +1357,6 @@ function RecommendationsSection({ items, compareIds, onToggleCompare }: { items:
 
 function ShareSummaryButton({ items }: { items: EventItem[] }) {
   const { details } = useEvent();
-  const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
     const total = items.reduce((s, i) => s + i.vendor.basePrice, 0);
@@ -1366,10 +1379,9 @@ function ShareSummaryButton({ items }: { items: EventItem[] }) {
     ];
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      toast.success("Resumen copiado, listo para compartir");
     } catch {
-      // clipboard unavailable
+      toast.error("No pudimos copiar el resumen");
     }
   };
 
@@ -1380,14 +1392,15 @@ function ShareSummaryButton({ items }: { items: EventItem[] }) {
       className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       title="Copia el resumen para mandarlo por WhatsApp"
     >
-      {copied ? <Check size={12} /> : <Share2 size={12} />}
-      {copied ? "¡Copiado!" : "Compartir"}
+      <Share2 size={12} aria-hidden="true" />
+      Compartir
     </button>
   );
 }
 
 function BudgetPanel({ items }: { items: EventItem[] }) {
   const { details } = useEvent();
+  const [expanded, setExpanded] = useState<string | null>(null);
   const total = items.reduce((sum, item) => sum + item.vendor.basePrice, 0);
   const over = total > details.budget;
   const fillPct = Math.min(100, Math.round((total / details.budget) * 100));
@@ -1413,7 +1426,9 @@ function BudgetPanel({ items }: { items: EventItem[] }) {
         </div>
         <div className="mt-4 flex items-baseline justify-between">
           <span className="text-sm text-muted-foreground">Estimado base</span>
-          <span className="font-serif text-3xl font-medium tracking-tight text-foreground">{formatMXN(total)}</span>
+          <span className="font-serif text-3xl font-medium tracking-tight text-foreground">
+            <CountUp value={total} format={formatMXN} />
+          </span>
         </div>
 
         <div className="mt-4">
@@ -1452,14 +1467,31 @@ function BudgetPanel({ items }: { items: EventItem[] }) {
               />
             ))}
           </div>
-          <ul className="mt-3 flex flex-col gap-1.5">
+          <ul className="mt-3 flex flex-col gap-1">
             {items.map((item) => (
-              <li key={item.vendor.id} className="flex items-center justify-between gap-3 text-xs">
-                <span className="truncate text-muted-foreground">{item.vendor.name}</span>
-                <span className="flex shrink-0 items-baseline gap-2">
-                  <span className="text-[10px] text-muted-foreground">apartado {formatMXN(apartadoDe(item.vendor.basePrice))}</span>
-                  <span className="font-medium text-foreground">{Math.round((item.vendor.basePrice / total) * 100)}%</span>
-                </span>
+              <li key={item.vendor.id}>
+                <button
+                  type="button"
+                  onClick={() => setExpanded(expanded === item.vendor.id ? null : item.vendor.id)}
+                  aria-expanded={expanded === item.vendor.id}
+                  className="flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-2 text-xs transition-colors hover:bg-secondary/60"
+                >
+                  <span className="truncate text-muted-foreground">{item.vendor.name}</span>
+                  <span className="flex shrink-0 items-baseline gap-2">
+                    <span className="text-[10px] text-muted-foreground">
+                      apartado {formatMXN(apartadoDe(item.vendor.basePrice))}
+                    </span>
+                    <span className="font-medium text-foreground">{Math.round((item.vendor.basePrice / total) * 100)}%</span>
+                  </span>
+                </button>
+                {expanded === item.vendor.id && (
+                  <div className="animate-fade-in mt-1 flex items-center justify-between gap-3 rounded-lg bg-secondary/60 px-3 py-2 text-[11px] text-muted-foreground">
+                    <span>Precio base</span>
+                    <span className="font-medium text-foreground">{formatMXN(item.vendor.basePrice)}</span>
+                    <span>Apartado hoy</span>
+                    <span className="font-medium text-foreground">{formatMXN(apartadoDe(item.vendor.basePrice))}</span>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -1559,10 +1591,51 @@ function QuoteForm() {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-dashed border-border px-6 py-20 text-center">
-      <span className="inline-flex size-14 items-center justify-center rounded-full bg-secondary text-foreground">
-        <Sparkles size={24} />
-      </span>
+    <div className="relative flex flex-col items-center overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-secondary/40 to-transparent px-6 py-16 text-center sm:py-20">
+      {/* Blobs decorativos de fondo */}
+      <span aria-hidden className="pointer-events-none absolute -left-16 -top-16 size-48 rounded-full bg-gold/15 blur-3xl" />
+      <span aria-hidden className="pointer-events-none absolute -bottom-20 -right-14 size-56 rounded-full bg-foreground/5 blur-3xl" />
+
+      {/* Ilustración SVG: calendario + globo + confeti */}
+      <svg viewBox="0 0 120 120" className="size-28" role="img" aria-label="Ilustración de planeación de evento">
+        <defs>
+          <linearGradient id="es-bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#f5f0e6" />
+            <stop offset="100%" stopColor="#e9dcc3" />
+          </linearGradient>
+          <linearGradient id="es-gold" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#c9a45c" />
+            <stop offset="100%" stopColor="#b08d57" />
+          </linearGradient>
+        </defs>
+        <circle cx="60" cy="60" r="54" fill="url(#es-bg)" />
+        {/* globo */}
+        <g transform="rotate(-12 92 26)">
+          <circle cx="92" cy="26" r="13" fill="none" stroke="url(#es-gold)" strokeWidth="2.5" />
+          <path d="M92 39l6 12M92 39l-6 12M92 39v12" stroke="url(#es-gold)" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <path d="M85 18l7 8 7-8" fill="none" stroke="url(#es-gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+        {/* calendario */}
+        <g>
+          <rect x="30" y="34" width="48" height="50" rx="9" fill="#fff" stroke="#d6c8ab" strokeWidth="2" />
+          <path d="M30 50h48" stroke="#d6c8ab" strokeWidth="2" />
+          <rect x="42" y="28" width="5" height="14" rx="2.5" fill="#c9a45c" />
+          <rect x="60" y="28" width="5" height="14" rx="2.5" fill="#c9a45c" />
+          <path d="M50 62l4-6h-7" fill="none" stroke="#1c1917" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M54 56v8h8" fill="none" stroke="#1c1917" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="70" cy="72" r="2" fill="#1c1917" />
+          <circle cx="70" cy="78" r="2" fill="#1c1917" />
+          <circle cx="70" cy="66" r="2" fill="#1c1917" />
+        </g>
+        {/* confeti */}
+        <path d="M20 62l6-10 6 6-9 7z" fill="#c9a45c" opacity="0.9" />
+        <path d="M104 58l5-9 5 5-8 7z" fill="#a8607a" opacity="0.75" />
+        <circle cx="24" cy="92" r="3.5" fill="#a8607a" opacity="0.8" />
+        <circle cx="100" cy="90" r="3" fill="#6f7d5a" opacity="0.8" />
+        <path d="M86 34l3-7 4 3-5 6z" fill="#6f7d5a" opacity="0.7" />
+        <path d="M28 34l3-6 4 3-5 5z" fill="#1c1917" opacity="0.35" />
+      </svg>
+
       <h2 className="mt-6 font-serif text-3xl font-medium tracking-tight text-foreground">Tu evento empieza aquí.</h2>
       <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
         Explora el marketplace y toca <strong className="font-medium text-foreground">“Agregar a mi Evento”</strong> en los
@@ -1570,7 +1643,7 @@ function EmptyState() {
       </p>
       <Link
         href="/marketplace"
-        className="mt-8 rounded-full bg-foreground px-6 py-3.5 text-sm font-medium text-background hover:opacity-90"
+        className="mt-8 inline-flex min-h-11 items-center rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-transform hover:scale-[1.02] hover:opacity-90 active:scale-95"
       >
         Explorar servicios
       </Link>
@@ -1590,7 +1663,7 @@ function EmptyState() {
           <Link
             key={cat.slug}
             href={`/marketplace?category=${cat.slug}`}
-            className="rounded-full border border-border px-3.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+            className="hit-44 inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
           >
             {cat.label}
           </Link>
@@ -1793,10 +1866,12 @@ function ExportEventButton() {
     a.download = "mi-evento-momentum.json";
     a.click();
     URL.revokeObjectURL(url);
+    toast.success("Evento exportado como JSON");
   };
   return (
     <button
       type="button"
+      id="btn-exportar"
       onClick={handleExport}
       className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       title="Descarga tu evento como archivo JSON para respaldarlo o moverlo a otro dispositivo"
@@ -1805,7 +1880,6 @@ function ExportEventButton() {
     </button>
   );
 }
-
 function ImportEventButton() {
   const { importEvent } = useEvent();
   const [open, setOpen] = useState(false);
@@ -1816,6 +1890,7 @@ function ImportEventButton() {
     const ok = importEvent(text);
     setResult(ok ? "ok" : "error");
     if (ok) {
+      toast.success("Evento importado correctamente");
       setText("");
       setTimeout(() => {
         setOpen(false);
@@ -1829,6 +1904,7 @@ function ImportEventButton() {
       <DialogTrigger asChild>
         <button
           type="button"
+          id="btn-importar"
           className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           title="Importa un evento exportado previamente"
         >
@@ -1875,7 +1951,10 @@ function ImportEventButton() {
 /* --------------------------------- Página ---------------------------------- */
 
 export function MiEventoClient() {
-  const { items, details, updateDetails, hydrated, removeItem, addItem, updateItemNote, updateItemStatus } = useEvent();
+  const { items, details, wedding, updateDetails, hydrated, removeItem, addItem, updateItemNote, updateItemStatus } = useEvent();
+  const router = useRouter();
+  const palette = usePaletteHotkey();
+  const isMobile = useIsMobile();
   const [editingName, setEditingName] = useState(false);
   const [lastRemoved, setLastRemoved] = useState<EventItem | null>(null);
   const [celebrate, setCelebrate] = useState(false);
@@ -1901,22 +1980,69 @@ export function MiEventoClient() {
   const coveredCategories = new Set(items.map((i) => i.vendor.category));
   const checklistComplete = items.length > 0 && coveredCategories.size >= CATEGORIES.length;
 
+  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const copyGuestLink = async () => {
+    try {
+      const code = encodeWeddingShare(wedding, details);
+      await navigator.clipboard.writeText(`${window.location.origin}/mi-evento/boda#s=${code}`);
+    } catch {
+      // clipboard unavailable
+    }
+  };
+
+  const paletteGroups: PaletteGroup[] = [
+    {
+      heading: "Ir a",
+      actions: [
+        { id: "nav-detalles", label: "Detalles del evento", icon: <CalendarDays size={16} />, keywords: ["fecha", "invitados", "nombre"], onSelect: () => scrollTo("detalles") },
+        ...(details.type === "boda"
+          ? [{ id: "nav-boda", label: "Página de nuestra boda", icon: <Heart size={16} />, keywords: ["boda", "web", "invitados"], onSelect: () => router.push("/mi-evento/boda") }]
+          : []),
+        ...(items.length > 0
+          ? [
+              { id: "nav-servicios", label: "Servicios", icon: <Sparkles size={16} />, keywords: ["proveedores"], onSelect: () => scrollTo("servicios") },
+              { id: "nav-presupuesto", label: "Presupuesto", icon: <Wallet size={16} />, keywords: ["dinero", "apartado", "costo"], onSelect: () => scrollTo("presupuesto") },
+              { id: "nav-tareas", label: "Tareas", icon: <ListTodo size={16} />, keywords: ["checklist", "pendientes"], onSelect: () => scrollTo("tareas") },
+            ]
+          : []),
+      ],
+    },
+    {
+      heading: "Acciones",
+      actions: [
+        { id: "act-explorar", label: "Explorar servicios", icon: <Plus size={16} />, keywords: ["marketplace", "agregar"], onSelect: () => router.push("/marketplace") },
+        ...(compareIds.length > 0
+          ? [{ id: "act-comparar", label: `Comparar seleccionados (${compareIds.length})`, icon: <ArrowUpDown size={16} />, keywords: ["versus", "comparador"], onSelect: () => setCompareOpen(true) }]
+          : []),
+        { id: "act-exportar", label: "Exportar evento", icon: <Download size={16} />, keywords: ["json", "respaldo", "descargar"], onSelect: () => document.getElementById("btn-exportar")?.click() },
+        ...(details.type === "boda"
+          ? [{ id: "act-copiar", label: "Copiar enlace para invitados", icon: <Link2 size={16} />, keywords: ["compartir", "link"], onSelect: copyGuestLink }]
+          : []),
+        { id: "act-tour", label: "Ver el tour de bienvenida", icon: <Sparkles size={16} />, keywords: ["ayuda", "guía", "onboarding"], onSelect: () => openTour() },
+      ],
+    },
+  ];
+
   const handleRemoveItem = (item: EventItem) => {
     removeItem(item.vendor.id);
     setLastRemoved(item);
-  };
-
-  const handleUndo = () => {
-    if (!lastRemoved) return;
-    addItem(lastRemoved.vendor, lastRemoved.date);
-    if (lastRemoved.note) updateItemNote(lastRemoved.vendor.id, lastRemoved.note);
-    if (lastRemoved.status) updateItemStatus(lastRemoved.vendor.id, lastRemoved.status);
-    setLastRemoved(null);
+    toast(`Quitaste ${item.vendor.name}`, {
+      duration: 4500,
+      action: {
+        label: "Deshacer",
+        onClick: () => {
+          addItem(item.vendor, item.date);
+          if (item.note) updateItemNote(item.vendor.id, item.note);
+          if (item.status) updateItemStatus(item.vendor.id, item.status);
+          setLastRemoved(null);
+        },
+      },
+    });
   };
 
   useEffect(() => {
     if (!lastRemoved) return;
-    const t = setTimeout(() => setLastRemoved(null), 4500);
+    const t = setTimeout(() => setLastRemoved(null), 4600);
     return () => clearTimeout(t);
   }, [lastRemoved]);
 
@@ -1935,7 +2061,13 @@ export function MiEventoClient() {
 
   return (
     <main className="editorial min-h-screen bg-background pb-24">
-      <MiEventoHeader count={items.length} />
+      <a
+        href="#detalles"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[80] focus:rounded-full focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:text-background"
+      >
+        Saltar al contenido
+      </a>
+      <MiEventoHeader count={items.length} onOpenPalette={() => palette.setOpen(true)} />
 
       {/* Hero */}
       <div className="relative overflow-hidden px-6 pb-10 pt-32 md:px-12 md:pt-40 lg:px-20">
@@ -1965,6 +2097,7 @@ export function MiEventoClient() {
             ) : (
               <button
                 type="button"
+                id="me-nombre"
                 onClick={() => setEditingName(true)}
                 className="group flex items-start gap-3 text-left font-serif text-5xl font-medium leading-[0.95] tracking-tight text-foreground md:text-7xl"
                 title="Toca para nombrar tu evento"
@@ -1984,8 +2117,21 @@ export function MiEventoClient() {
       </div>
 
       {!hydrated ? (
-        <div className="px-6 md:px-12 lg:px-20">
-          <div className="h-40 animate-pulse rounded-2xl bg-secondary" />
+        <div
+          className="flex flex-col gap-12 px-6 md:px-12 lg:px-20"
+          aria-busy="true"
+          aria-label="Cargando tu evento"
+        >
+          <div className="flex flex-col gap-4">
+            <Skeleton className="h-4 w-44" />
+            <Skeleton className="h-52 w-full rounded-3xl" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Skeleton className="h-44 rounded-2xl" />
+            <Skeleton className="hidden h-44 rounded-2xl sm:block" />
+            <Skeleton className="hidden h-44 rounded-2xl lg:block" />
+          </div>
+          <Skeleton className="h-28 w-full rounded-2xl" />
         </div>
       ) : (
         <div className="flex flex-col gap-12 px-6 md:px-12 lg:px-20">
@@ -2032,6 +2178,9 @@ export function MiEventoClient() {
       )}
 
       <Confetti show={celebrate} />
+      <WelcomeTour />
+      <Toaster position={isMobile ? "bottom-center" : "bottom-right"} />
+      <CommandPalette open={palette.open} onOpenChange={palette.setOpen} groups={paletteGroups} placeholder="Busca una sección o acción…" />
 
       <CompareBar count={compareIds.length} lifted={lastRemoved !== null} onOpen={() => setCompareOpen(true)} />
       <MobileCtaBar items={items} />
@@ -2042,21 +2191,6 @@ export function MiEventoClient() {
         onOpenChange={setCompareOpen}
         onRemove={(id) => setCompareIds((prev) => prev.filter((x) => x !== id))}
       />
-
-      {lastRemoved && (
-        <div className="animate-scale-in fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-foreground px-5 py-3 shadow-xl md:bottom-6">
-          <p className="text-sm text-background">
-            Quitaste <strong className="font-semibold">{lastRemoved.vendor.name}</strong>
-          </p>
-          <button
-            type="button"
-            onClick={handleUndo}
-            className="inline-flex items-center gap-1.5 rounded-full bg-background px-4 py-1.5 text-xs font-semibold text-foreground transition-opacity hover:opacity-80"
-          >
-            <Undo2 size={12} /> Deshacer
-          </button>
-        </div>
-      )}
     </main>
   );
 }

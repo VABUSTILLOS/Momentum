@@ -353,6 +353,47 @@
   animation: fadeIn 0.7s ease-out forwards;
 }
 
+/* ---------------------- Accesibilidad y hit-area móvil -------------------- */
+
+/* Extiende el área táctil de botones pequeños a ≥44px sin distorsionar el layout */
+.hit-44 {
+  position: relative;
+}
+
+.hit-44::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+}
+
+/* Oculta la barra de scroll horizontal sin perder el scroll */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Respeta la preferencia de movimiento reducido en animaciones CSS de loop */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-slow,
+  .animate-ken-burns,
+  .grain-overlay::before {
+    animation: none !important;
+  }
+}
+
+/* Foco visible consistente (páginas editoriales) */
+.editorial :focus-visible {
+  outline: 2px solid var(--wed-accent, #b08d57);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* ------------------------------ Impresión ---------------------------------- */
 
 @media print {
@@ -386,5 +427,10 @@
   .opacity-0 {
     opacity: 1 !important;
     animation: none !important;
+  }
+
+  /* Tarjeta imprimible del QR de invitación (excepción a la regla .fixed) */
+  .fixed.qr-print-card {
+    display: flex !important;
   }
 }

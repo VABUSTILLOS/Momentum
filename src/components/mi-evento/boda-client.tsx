@@ -22,21 +22,27 @@ import {
   MessageCircle,
   MessagesSquare,
   Moon,
+  QrCode,
+  MoreHorizontal,
   Pencil,
   PartyPopper,
   Plus,
   RefreshCw,
   Send,
+  Share2,
   Shirt,
   Sun,
   Trash2,
   Users,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { motion, useScroll, useSpring } from "framer-motion";
+import { toast } from "sonner";
+import { motion, useReducedMotion, useScroll, useSpring, AnimatePresence } from "framer-motion";
 import { FadeImage } from "@/components/fade-image";
 import { AlbumSection } from "@/components/mi-evento/album-section";
-import { CountUp, OrnamentDivider, SectionHeading } from "@/components/mi-evento/editorial";
+import { CommandPalette, PaletteButton, usePaletteHotkey, type PaletteGroup } from "@/components/mi-evento/command-palette";
+import { FadeUp, Magnetic, OrnamentDivider, SectionHeading, Tilt } from "@/components/mi-evento/editorial";
+import { QrInvitationSheet } from "@/components/mi-evento/qr-invitation";
 import {
   Accordion,
   AccordionContent,
@@ -51,6 +57,9 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Toaster } from "@/components/ui/sonner";
+import { useIsMobile } from "@/components/ui/use-mobile";
 import {
   Sheet,
   SheetContent,
@@ -154,9 +163,9 @@ function EditCornerButton({ label, onClick }: { label: string; onClick: () => vo
 
 /* --------------------------------- Toolbar --------------------------------- */
 
-function BodaToolbar({ onEdit, guestMode, onToggleGuest, rsvpCount, onShowRsvps, wishCount, onShowWishes }: { onEdit: () => void; guestMode: boolean; onToggleGuest: () => void; rsvpCount: number; onShowRsvps: () => void; wishCount: number; onShowWishes: () => void }) {
+function BodaToolbar({ onEdit, guestMode, onToggleGuest, rsvpCount, onShowRsvps, wishCount, onShowWishes, onOpenPalette, onShowQr }: { onEdit: () => void; guestMode: boolean; onToggleGuest: () => void; rsvpCount: number; onShowRsvps: () => void; wishCount: number; onShowWishes: () => void; onOpenPalette: () => void; onShowQr: () => void }) {
   const [mounted, setMounted] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
   const { wedding, details } = useEvent();
 
@@ -166,96 +175,204 @@ function BodaToolbar({ onEdit, guestMode, onToggleGuest, rsvpCount, onShowRsvps,
     try {
       const hash = encodeWeddingShare(wedding, details);
       await navigator.clipboard.writeText(`${window.location.origin}/mi-evento/boda#s=${hash}`);
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2200);
+      toast.success("Enlace para invitados copiado");
     } catch {
-      /* portapapeles no disponible */
+      toast.error("No pudimos copiar el enlace");
     }
   };
 
+  const toggleTheme = () => setTheme(resolvedTheme === "dark" ? "light" : "dark");
+
   if (guestMode) return null;
 
+  const circleBtn =
+    "hit-44 inline-flex size-10 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10";
+
   return (
-    <header className="fixed left-1/2 top-4 z-50 w-[90%] max-w-6xl -translate-x-1/2">
-      <div className="flex items-center justify-between rounded-full border border-[#e7c887]/20 bg-foreground/85 px-5 py-3 shadow-[0_20px_60px_-30px_rgba(28,25,23,0.6)] backdrop-blur-xl">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/mi-evento"
-            className="inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
-            aria-label="Volver a Mi Evento"
-          >
-            <ArrowLeft size={16} />
-          </Link>
-          <span className="flex items-baseline gap-2 font-serif text-xl tracking-tight text-background">
-            Momentum <span className="font-sans text-[10px] uppercase tracking-[0.18em] opacity-70">Mi Boda</span>
-          </span>
+    <>
+      <header className="fixed left-1/2 top-4 z-50 w-[90%] max-w-6xl -translate-x-1/2">
+        {/* ---------- Layout móvil (<sm): toolbar compacta + menú "Más" ---------- */}
+        <div className="flex items-center justify-between rounded-full border border-[#e7c887]/20 bg-foreground/85 py-2 pl-2.5 pr-2 shadow-[0_20px_60px_-30px_rgba(28,25,23,0.6)] backdrop-blur-xl sm:hidden">
+          <div className="flex items-center gap-2">
+            <Link href="/mi-evento" className={circleBtn} aria-label="Volver a Mi Evento">
+              <ArrowLeft size={16} />
+            </Link>
+            <span className="font-serif text-lg tracking-tight text-background">Mi Boda</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button type="button" onClick={onToggleGuest} className={circleBtn} aria-label="Ver la página como invitado" title="Ver como invitado">
+              <Eye aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setMoreOpen(true)}
+              className="hit-44 inline-flex size-10 items-center justify-center rounded-full bg-background text-foreground"
+              aria-label="Más opciones"
+              title="Más opciones"
+            >
+              <MoreHorizontal aria-hidden="true" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onToggleGuest}
-            className="inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
-            aria-label="Ver la página como invitado"
-            title="Ver como invitado"
-          >
-            <Eye aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={onShowRsvps}
-            className="relative inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
-            aria-label={`Ver respuestas de invitados (${rsvpCount})`}
-            title="Respuestas de invitados"
-          >
-            <ClipboardList aria-hidden="true" />
-            {rsvpCount > 0 && (
-              <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-background px-1 text-[10px] font-bold text-foreground">
-                {rsvpCount}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={onShowWishes}
-            className="relative inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
-            aria-label={`Ver libro de firmas (${wishCount})`}
-            title="Libro de firmas"
-          >
-            <MessagesSquare aria-hidden="true" />
-            {wishCount > 0 && (
-              <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-background px-1 text-[10px] font-bold text-foreground">
-                {wishCount}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={copyGuestLink}
-            className="inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
-            aria-label="Copiar enlace para invitados"
-            title="Copiar enlace para invitados"
-          >
-            {linkCopied ? <Check aria-hidden="true" /> : <Link2 aria-hidden="true" />}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
-            aria-label={mounted && resolvedTheme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-          >
-            {mounted && resolvedTheme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-          </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="inline-flex items-center gap-2 rounded-full bg-background px-5 py-2 text-sm font-medium text-foreground hover:bg-background/90"
-          >
-            <Pencil size={14} />
-            <span className="hidden sm:inline">Editar contenido</span>
-          </button>
+
+        {/* ---------- Layout escritorio (≥sm) ---------- */}
+        <div className="hidden items-center justify-between rounded-full border border-[#e7c887]/20 bg-foreground/85 px-5 py-3 shadow-[0_20px_60px_-30px_rgba(28,25,23,0.6)] backdrop-blur-xl sm:flex">
+          <div className="flex items-center gap-4">
+            <Link href="/mi-evento" className={circleBtn} aria-label="Volver a Mi Evento">
+              <ArrowLeft size={16} />
+            </Link>
+            <span className="flex items-baseline gap-2 font-serif text-xl tracking-tight text-background">
+              Momentum <span className="font-sans text-[10px] uppercase tracking-[0.18em] opacity-70">Mi Boda</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <PaletteButton dark onClick={onOpenPalette} />
+            <button
+              type="button"
+              onClick={onToggleGuest}
+              className={circleBtn}
+              aria-label="Ver la página como invitado"
+              title="Ver como invitado"
+            >
+              <Eye aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={onShowRsvps}
+              className={`relative ${circleBtn}`}
+              aria-label={`Ver respuestas de invitados (${rsvpCount})`}
+              title="Respuestas de invitados"
+            >
+              <ClipboardList aria-hidden="true" />
+              {rsvpCount > 0 && (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-background px-1 text-[10px] font-bold text-foreground">
+                  {rsvpCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onShowWishes}
+              className={`relative ${circleBtn}`}
+              aria-label={`Ver libro de firmas (${wishCount})`}
+              title="Libro de firmas"
+            >
+              <MessagesSquare aria-hidden="true" />
+              {wishCount > 0 && (
+                <span className="absolute -right-1 -top-1 inline-flex min-w-5 items-center justify-center rounded-full bg-background px-1 text-[10px] font-bold text-foreground">
+                  {wishCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={copyGuestLink}
+              className={circleBtn}
+              aria-label="Copiar enlace para invitados"
+              title="Copiar enlace para invitados"
+            >
+              <Link2 aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={onShowQr}
+              className={circleBtn}
+              aria-label="QR de invitación"
+              title="Genera el QR de invitación para imprimir"
+            >
+              <QrCode aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className={circleBtn}
+              aria-label={mounted && resolvedTheme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            >
+              {mounted && resolvedTheme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+            </button>
+            <button
+              type="button"
+              onClick={onEdit}
+              className="hit-44 inline-flex items-center gap-2 rounded-full bg-background px-5 py-2.5 text-sm font-medium text-foreground hover:bg-background/90"
+            >
+              <Pencil size={14} />
+              <span className="hidden lg:inline">Editar contenido</span>
+            </button>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* ---------- Menú "Más" (móvil) ---------- */}
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent side="bottom" className="w-full pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <SheetHeader>
+            <SheetTitle className="font-serif text-2xl tracking-tight">Más opciones</SheetTitle>
+            <SheetDescription className="sr-only">Acciones rápidas de tu página de boda</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 flex flex-col gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setMoreOpen(false);
+                onShowRsvps();
+              }}
+              className="flex min-h-12 items-center gap-3 rounded-xl border border-border bg-secondary/60 px-4 text-left text-sm font-medium text-foreground"
+            >
+              <ClipboardList size={18} aria-hidden="true" />
+              Respuestas de invitados
+              {rsvpCount > 0 && (
+                <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-foreground px-1.5 py-0.5 text-[10px] font-bold text-background">
+                  {rsvpCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMoreOpen(false);
+                onShowWishes();
+              }}
+              className="flex min-h-12 items-center gap-3 rounded-xl border border-border bg-secondary/60 px-4 text-left text-sm font-medium text-foreground"
+            >
+              <MessagesSquare size={18} aria-hidden="true" />
+              Libro de firmas
+              {wishCount > 0 && (
+                <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-foreground px-1.5 py-0.5 text-[10px] font-bold text-background">
+                  {wishCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={copyGuestLink}
+              className="flex min-h-12 items-center gap-3 rounded-xl border border-border bg-secondary/60 px-4 text-left text-sm font-medium text-foreground"
+            >
+              <Link2 size={18} aria-hidden="true" />
+              Copiar enlace para invitados
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMoreOpen(false);
+                onShowQr();
+              }}
+              className="flex min-h-12 items-center gap-3 rounded-xl border border-border bg-secondary/60 px-4 text-left text-sm font-medium text-foreground"
+            >
+              <QrCode size={18} aria-hidden="true" />
+              QR de invitación
+            </button>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="flex min-h-12 items-center gap-3 rounded-xl border border-border bg-secondary/60 px-4 text-left text-sm font-medium text-foreground"
+            >
+              {mounted && resolvedTheme === "dark" ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+              {mounted && resolvedTheme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 
@@ -731,8 +848,33 @@ function useCountdown(target?: Date) {
   };
 }
 
+function FlipNumber({ value, reduce }: { value: number; reduce: boolean | null }) {
+  const text = String(value).padStart(2, "0");
+  return (
+    <span className="inline-flex font-serif text-3xl font-medium tabular-nums">
+      {text.split("").map((digit, i) => (
+        <span key={i} className="relative inline-block h-[1.25em] w-[0.62em] overflow-hidden">
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+              key={digit}
+              initial={reduce ? false : { y: "70%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={reduce ? { opacity: 0 } : { y: "-70%", opacity: 0 }}
+              transition={{ duration: 0.32, ease: "easeOut" }}
+              className="absolute inset-0 flex items-center justify-center"
+            >
+              {digit}
+            </motion.span>
+          </AnimatePresence>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function Countdown({ date }: { date?: Date }) {
   const t = useCountdown(date);
+  const reduceMotion = useReducedMotion();
   if (!date) {
     return (
       <Link
@@ -764,11 +906,9 @@ function Countdown({ date }: { date?: Date }) {
       {cells.map((c) => (
         <div
           key={c.l}
-          className="flex min-w-0 flex-1 flex-col items-center rounded-2xl bg-background/10 px-2 py-4 backdrop-blur-md sm:w-[72px] sm:flex-none sm:px-3"
+          className="flex min-w-0 flex-1 flex-col items-center rounded-2xl border border-white/10 bg-background/10 px-2 py-4 backdrop-blur-md sm:w-[72px] sm:flex-none sm:px-3"
         >
-          <span className="font-serif text-3xl font-medium tabular-nums">
-            <CountUp value={c.v} once duration={1.4} />
-          </span>
+          <FlipNumber value={c.v} reduce={reduceMotion} />
           <span className="mt-1 text-[10px] uppercase tracking-[0.2em] opacity-80">{c.l}</span>
         </div>
       ))}
@@ -815,16 +955,34 @@ function downloadIcs(date: Date, names: string, wedding: WeddingSite) {
 
 function GuestActions({ wedding }: { wedding: WeddingSite }) {
   const details = useBodaDetails();
-  const [copied, setCopied] = useState(false);
+  const [shareDone, setShareDone] = useState(false);
   const names = coupleNames(wedding);
 
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2200);
+      toast.success("Enlace copiado");
     } catch {
-      /* portapapeles no disponible */
+      toast.error("No pudimos copiar el enlace");
+    }
+  };
+
+  const sharePage = async () => {
+    const fecha = details.date
+      ? details.date.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      : "muy pronto";
+    const text = `💍 ¡${names.label} se casan! Acompáñalos el ${fecha}. Todos los detalles aquí:`;
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: `Boda de ${names.label}`, text, url: window.location.href });
+        setShareDone(true);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setShareDone(true);
+      }
+      setTimeout(() => setShareDone(false), 2200);
+    } catch {
+      /* el usuario canceló el share o el portapapeles no está disponible */
     }
   };
 
@@ -836,31 +994,31 @@ function GuestActions({ wedding }: { wedding: WeddingSite }) {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
 
+  const baseBtn =
+    "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-white/40 px-5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10 sm:w-auto sm:py-2.5";
+
   return (
-    <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+    <div className="mt-6 flex w-full max-w-sm flex-col items-stretch gap-2 px-2 sm:w-auto sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:px-0">
       {details.date && (
-        <button
-          type="button"
-          onClick={() => downloadIcs(details.date as Date, names.label, wedding)}
-          className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-2.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10"
-        >
+        <button type="button" onClick={() => downloadIcs(details.date as Date, names.label, wedding)} className={baseBtn}>
           <CalendarPlus size={14} /> Agregar al calendario
         </button>
       )}
-      <button
-        type="button"
-        onClick={copyLink}
-        className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-2.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10"
-      >
-        {copied ? <Check size={14} /> : <Copy size={14} />}
-        {copied ? "¡Enlace copiado!" : "Copiar enlace"}
+      <Magnetic>
+        <button type="button" onClick={copyLink} className={baseBtn}>
+          <Copy size={14} aria-hidden="true" /> Copiar enlace
+        </button>
+      </Magnetic>
+      <button type="button" onClick={shareWhatsApp} className={`${baseBtn} sm:hidden`}>
+        <MessageCircle size={14} /> Compartir por WhatsApp
       </button>
       <button
         type="button"
-        onClick={shareWhatsApp}
-        className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-2.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10"
+        onClick={sharePage}
+        className={`${baseBtn} border-transparent bg-white font-semibold text-black hover:bg-white/90 sm:hidden`}
       >
-        <MessageCircle size={14} /> Compartir por WhatsApp
+        {shareDone ? <Check size={14} /> : <Share2 size={14} />}
+        {shareDone ? "¡Listo!" : "Compartir"}
       </button>
     </div>
   );
@@ -921,7 +1079,9 @@ function HeroSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => 
           {names.p2.charAt(0)}
         </div>
         <p {...fade(80, "mt-6 text-xs uppercase tracking-[0.32em] opacity-90")}>Nos casamos</p>
-        <h1 {...fade(150, "mt-6 font-serif text-5xl font-medium leading-[0.95] tracking-tight sm:text-7xl md:text-9xl")}>
+        <h1
+          {...fade(150, "mt-6 break-words px-4 font-serif text-[clamp(2.75rem,11vw,7rem)] font-medium leading-[0.95] tracking-tight sm:px-0")}
+        >
           {names.p1}
           <span className="mx-3 font-light italic text-[#e7c887] md:mx-5">&</span>
           {names.p2}
@@ -981,20 +1141,23 @@ function GallerySection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () 
       <EditCornerButton label="Editar galería" onClick={onEdit} />
       <div className={cn("grid grid-cols-2 gap-3", photos.length > 2 && "md:grid-cols-4")}>
         {photos.map((src, i) => (
-          <button
-            key={`${i}-${src}`}
-            type="button"
-            onClick={() => setSelected(i)}
-            aria-label={`Ver foto ${i + 1} en grande`}
-            {...fade(i * 100, "group relative aspect-[3/4] cursor-zoom-in overflow-hidden rounded-2xl bg-secondary")}
-          >
-            <FadeImage
-              src={src}
-              alt={`Momento ${i + 1}`}
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-          </button>
+          <FadeUp key={`${i}-${src}`} index={i}>
+            <Tilt className="w-full">
+              <button
+                type="button"
+                onClick={() => setSelected(i)}
+                aria-label={`Ver foto ${i + 1} en grande`}
+                className="group relative aspect-[3/4] w-full cursor-zoom-in overflow-hidden rounded-2xl bg-secondary"
+              >
+                <FadeImage
+                  src={src}
+                  alt={`Momento ${i + 1}`}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+              </button>
+            </Tilt>
+          </FadeUp>
         ))}
       </div>
       <Dialog open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
@@ -1030,7 +1193,7 @@ function StorySection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () =>
   }));
 
   return (
-    <section id="historia" className="relative mx-auto max-w-2xl scroll-mt-24 px-6 pb-20 md:pb-28">
+    <section id="historia" className="relative mx-auto max-w-2xl scroll-mt-28 px-6 pb-20 md:pb-28">
       <EditCornerButton label="Editar historia" onClick={onEdit} />
       <SectionHeading
         {...fade(0)}
@@ -1039,15 +1202,17 @@ function StorySection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () =>
       />
       <ol className="relative mt-12 flex flex-col gap-10 border-l-2 border-border pl-8">
         {moments.map((m, i) => (
-          <li key={i} {...fade(150 + i * 120, "relative")}>
+          <li key={i} className="relative">
             <span
               className="absolute -left-[41px] top-1 inline-flex size-5 items-center justify-center rounded-full"
               style={{ backgroundColor: "var(--wed-accent)" }}
             >
               <Heart size={10} className="fill-background text-background" />
             </span>
-            <p className="font-serif text-xl font-medium tracking-tight text-foreground">{m.title}</p>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{m.text}</p>
+            <FadeUp index={i}>
+              <p className="font-serif text-xl font-medium tracking-tight text-foreground">{m.title}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{m.text}</p>
+            </FadeUp>
           </li>
         ))}
       </ol>
@@ -1115,7 +1280,7 @@ function VenueCard({
 function DetailsGrid({ wedding, onEditCeremony, onEditReception }: { wedding: WeddingSite; onEditCeremony: () => void; onEditReception: () => void }) {
   const details = useBodaDetails();
   return (
-    <section id="detalles" className="mx-auto max-w-4xl scroll-mt-24 px-6 pb-20 md:pb-28">
+    <section id="detalles" className="mx-auto max-w-4xl scroll-mt-28 px-6 pb-20 md:pb-28">
       <div className="relative grid gap-6 md:grid-cols-2">
         <div className="relative">
           <EditCornerButton label="Editar ceremonia" onClick={onEditCeremony} />
@@ -1161,7 +1326,7 @@ function AccommodationSection({ wedding, onEdit }: { wedding: WeddingSite; onEdi
   if (!hasHotel && !hasNote) {
     if (guestMode) return null;
     return (
-      <section id="alojamiento" className="scroll-mt-24 px-6 pb-20 md:pb-28">
+      <section id="alojamiento" className="scroll-mt-28 px-6 pb-20 md:pb-28">
         <div className="mx-auto flex max-w-2xl justify-center">
           <button
             type="button"
@@ -1175,7 +1340,7 @@ function AccommodationSection({ wedding, onEdit }: { wedding: WeddingSite; onEdi
     );
   }
   return (
-    <section id="alojamiento" className="relative scroll-mt-24 px-6 pb-20 md:pb-28">
+    <section id="alojamiento" className="relative scroll-mt-28 px-6 pb-20 md:pb-28">
       <EditCornerButton label="Editar alojamiento" onClick={onEdit} />
       <div className="mx-auto max-w-2xl text-center">
         <span
@@ -1211,27 +1376,34 @@ function ItinerarySection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: (
   const entries = wedding.itinerary.filter((e) => e.time.trim() || e.label.trim());
   if (entries.length === 0) return null;
   return (
-    <section id="itinerario" className="relative scroll-mt-24 px-6 pb-20 md:pb-28">
+    <section id="itinerario" className="relative scroll-mt-28 px-6 pb-20 md:pb-28">
       <EditCornerButton label="Editar itinerario" onClick={onEdit} />
       <SectionHeading
         {...fade(0)}
         eyebrow="El gran día"
         title={<>Itinerario <em className="italic text-gold">del día</em></>}
       />
-      <ol {...fade(200, "mx-auto mt-12 flex max-w-3xl flex-wrap items-start justify-center gap-y-8")}>
+      <ol
+        {...fade(
+          200,
+          "mx-auto mt-12 flex max-w-3xl items-start gap-0 overflow-x-auto scrollbar-hide snap-x snap-mandatory px-2 sm:flex-wrap sm:justify-center sm:gap-y-8 sm:overflow-visible sm:px-0"
+        )}
+      >
         {entries.map((entry, i) => (
-          <li key={i} className="relative flex w-40 flex-col items-center px-4 text-center">
-            {i < entries.length - 1 && (
-              <span aria-hidden="true" className="absolute left-1/2 top-3.5 -z-10 h-px w-full bg-border" />
-            )}
-            <span
-              className="inline-flex size-7 items-center justify-center rounded-full"
-              style={{ backgroundColor: "var(--wed-accent)" }}
-            >
-              <span className="size-2 rounded-full bg-background" />
-            </span>
-            <p className="mt-3 font-serif text-lg font-medium tabular-nums text-foreground">{entry.time || "—"}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">{entry.label || "Momento"}</p>
+          <li key={i} className="relative flex w-40 shrink-0 snap-start flex-col items-center px-4 text-center">
+            <FadeUp index={i} className="relative flex w-full flex-col items-center">
+              {i < entries.length - 1 && (
+                <span aria-hidden="true" className="absolute left-1/2 top-3.5 -z-10 h-px w-full bg-border" />
+              )}
+              <span
+                className="inline-flex size-7 items-center justify-center rounded-full"
+                style={{ backgroundColor: "var(--wed-accent)" }}
+              >
+                <span className="size-2 rounded-full bg-background" />
+              </span>
+              <p className="mt-3 font-serif text-lg font-medium tabular-nums text-foreground">{entry.time || "—"}</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">{entry.label || "Momento"}</p>
+            </FadeUp>
           </li>
         ))}
       </ol>
@@ -1245,7 +1417,7 @@ function GiftSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => 
   return (
     <section
       id="regalos"
-      className="relative scroll-mt-24 px-6 py-20 md:py-28"
+      className="relative scroll-mt-28 px-6 py-20 md:py-28"
       style={{ backgroundColor: "var(--wed-soft)" }}
     >
       <EditCornerButton label="Editar mesa de regalos" onClick={onEdit} />
@@ -1306,7 +1478,7 @@ function FaqSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => v
   const faqs = wedding.faqs.filter((f) => f.q.trim());
   if (faqs.length === 0) return null;
   return (
-    <section id="faq" className="relative mx-auto max-w-2xl scroll-mt-24 px-6 pb-20 md:pb-28">
+    <section id="faq" className="relative mx-auto max-w-2xl scroll-mt-28 px-6 pb-20 md:pb-28">
       <EditCornerButton label="Editar preguntas frecuentes" onClick={onEdit} />
       <div className="text-center">
         <span
@@ -1343,7 +1515,7 @@ function WishesSection({ wedding }: { wedding: WeddingSite }) {
   const names = coupleNames(wedding);
 
   return (
-    <section id="deseos" className="relative scroll-mt-24 px-6 pb-20 md:pb-28">
+    <section id="deseos" className="relative scroll-mt-28 px-6 pb-20 md:pb-28">
       <div className="mx-auto max-w-2xl text-center">
         <span
           {...fade(0, "inline-flex size-12 items-center justify-center rounded-full")}
@@ -1453,20 +1625,67 @@ function WishesSection({ wedding }: { wedding: WeddingSite }) {
   );
 }
 
+const RSVP_CONFETTI = ["#B08D57", "#d4af7a", "#e7c887", "#8a6d3b", "#f5e6c8"];
+
+function RsvpConfetti({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[60] overflow-hidden">
+      <style>{`@keyframes rsvp-confetti-fall { 0% { transform: translateY(-8vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(720deg); opacity: 0; } }`}</style>
+      {Array.from({ length: 36 }).map((_, i) => (
+        <span
+          key={i}
+          className="absolute top-0 block h-3 w-2 rounded-sm"
+          style={{
+            left: `${(i / 36) * 100 + (i % 3)}%`,
+            backgroundColor: RSVP_CONFETTI[i % RSVP_CONFETTI.length],
+            animation: `rsvp-confetti-fall ${2.4 + (i % 5) * 0.35}s ease-in ${(i % 6) * 0.18}s forwards`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function RsvpSection({ wedding }: { wedding: WeddingSite }) {
   const { addRsvp } = useEvent();
+  const reduceMotion = useReducedMotion();
   const [sent, setSent] = useState(false);
+  const [step, setStep] = useState(0);
+  const [dir, setDir] = useState(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [attending, setAttending] = useState<"si" | "no">("si");
+  const [attending, setAttending] = useState<"si" | "no" | null>(null);
   const [companions, setCompanions] = useState(0);
   const [allergies, setAllergies] = useState("");
+  const [showConfetti, setShowConfetti] = useState(false);
   const names = coupleNames(wedding);
+
+  const goTo = (next: number) => {
+    setDir(next > step ? 1 : -1);
+    setStep(next);
+  };
+
+  const canAdvance = step === 0 ? attending !== null : step === 1 ? name.trim().length > 1 && /.+@.+\..+/.test(email.trim()) : true;
+
+  const handleSubmit = () => {
+    if (!attending || !name.trim() || !email.trim()) return;
+    addRsvp({
+      name: name.trim(),
+      attending,
+      companions: attending === "si" ? companions : 0,
+      allergies: attending === "si" ? allergies.trim() : "",
+    });
+    setSent(true);
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 4800);
+  };
 
   if (sent) {
     return (
-      <section id="rsvp" className="scroll-mt-24 px-6 py-20 md:py-28">
-        <div className="animate-scale-in mx-auto flex max-w-md flex-col items-center rounded-3xl border border-border px-8 py-14 text-center">
+      <section id="rsvp" className="scroll-mt-28 px-6 py-20 md:py-28">
+        <RsvpConfetti show={showConfetti} />
+        <FadeUp className="mx-auto flex max-w-md flex-col items-center rounded-3xl border border-border px-8 py-14 text-center">
           <span className="inline-flex size-14 items-center justify-center rounded-full bg-foreground text-background">
             <Check size={24} />
           </span>
@@ -1476,13 +1695,16 @@ function RsvpSection({ wedding }: { wedding: WeddingSite }) {
               ? `${names.p1} y ${names.p2} no pueden esperar a celebrar contigo${companions > 0 ? ` y tus ${companions} ${companions === 1 ? "acompañante" : "acompañantes"}` : ""}.`
               : "Te extrañaremos ese día. ¡Gracias por avisarnos!"}
           </p>
-        </div>
+        </FadeUp>
       </section>
     );
   }
 
+  const stepTitles = ["¿Nos acompañas?", "Tus datos", attending === "si" ? "Últimos detalles" : "Confirmar"];
+  const slide = reduceMotion ? {} : { x: 44 * dir };
+
   return (
-    <section id="rsvp" className="scroll-mt-24 px-6 py-20 md:py-28">
+    <section id="rsvp" className="scroll-mt-28 px-6 py-20 md:py-28">
       <div className="mx-auto max-w-md">
         <SectionHeading
           {...fade(0)}
@@ -1492,102 +1714,167 @@ function RsvpSection({ wedding }: { wedding: WeddingSite }) {
         <p {...fade(100, "mt-3 text-center text-sm text-muted-foreground")}>
           Ayúdanos a que todo salga perfecto. Confirma antes del gran día.
         </p>
+
+        {/* Progress dots */}
+        <div {...fade(150, "mt-6 flex items-center justify-center gap-2")} aria-hidden="true">
+          {stepTitles.map((t, i) => (
+            <span
+              key={t}
+              className={cn(
+                "h-1.5 rounded-full transition-all duration-300",
+                i === step ? "w-8" : "w-1.5",
+                i <= step ? "bg-foreground" : "bg-border"
+              )}
+              style={i === step ? { backgroundColor: "var(--wed-accent)" } : undefined}
+            />
+          ))}
+        </div>
+        <p className="mt-2 text-center text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          Paso {step + 1} de 3 · {stepTitles[step]}
+        </p>
+
         <form
-          {...fade(200, "mt-8 flex flex-col gap-3")}
+          {...fade(200, "mt-6")}
           onSubmit={(e) => {
             e.preventDefault();
-            if (name.trim() && email.trim()) {
-              addRsvp({
-                name: name.trim(),
-                attending,
-                companions: attending === "si" ? companions : 0,
-                allergies: attending === "si" ? allergies.trim() : "",
-              });
-              setSent(true);
+            if (step < 2) {
+              if (canAdvance) goTo(step + 1);
+            } else {
+              handleSubmit();
             }
           }}
         >
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Tu nombre completo"
-            className="w-full rounded-full border border-border bg-background px-5 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-          <input
-            required
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Correo electrónico"
-            className="w-full rounded-full border border-border bg-background px-5 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          />
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                { id: "si", label: "Sí, ahí estaré" },
-                { id: "no", label: "No podré ir" },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setAttending(opt.id)}
-                className={cn(
-                  "min-h-11 rounded-full px-4 py-3 text-sm font-medium transition-colors",
-                  attending !== opt.id && "border border-border text-muted-foreground hover:border-foreground hover:text-foreground"
-                )}
-                style={attending === opt.id ? { backgroundColor: "var(--wed-accent)", color: "#fff" } : undefined}
+          <div className="overflow-hidden">
+            <AnimatePresence mode="wait" initial={false} custom={dir}>
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, ...slide }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -44 * dir }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="flex flex-col gap-3"
               >
-                {opt.label}
-              </button>
-            ))}
+                {step === 0 && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {(
+                      [
+                        { id: "si", label: "Sí, ahí estaré", hint: "Celebremos juntos", icon: PartyPopper },
+                        { id: "no", label: "No podré ir", hint: "Me perderé la fiesta", icon: Heart },
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setAttending(opt.id)}
+                        aria-pressed={attending === opt.id}
+                        className={cn(
+                          "flex min-h-28 flex-col items-center justify-center gap-1.5 rounded-3xl border px-4 py-5 text-center transition-all",
+                          attending === opt.id
+                            ? "border-transparent text-white shadow-lg"
+                            : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"
+                        )}
+                        style={attending === opt.id ? { backgroundColor: "var(--wed-accent)" } : undefined}
+                      >
+                        <opt.icon size={22} aria-hidden="true" />
+                        <span className="text-sm font-semibold">{opt.label}</span>
+                        <span className={cn("text-[11px]", attending === opt.id ? "text-white/80" : "text-muted-foreground/70")}>{opt.hint}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {step === 1 && (
+                  <>
+                    <input
+                      autoFocus
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Tu nombre completo"
+                      autoComplete="name"
+                      className="w-full rounded-full border border-border bg-background px-5 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    <input
+                      required
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Correo electrónico"
+                      autoComplete="email"
+                      className="w-full rounded-full border border-border bg-background px-5 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </>
+                )}
+
+                {step === 2 && attending === "si" && (
+                  <>
+                    <div className="flex items-center justify-between rounded-full border border-border px-5 py-2.5">
+                      <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                        <Users size={14} /> Acompañantes
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setCompanions((c) => Math.max(0, c - 1))}
+                          disabled={companions === 0}
+                          aria-label="Quitar acompañante"
+                          className="inline-flex size-10 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-30"
+                        >
+                          −
+                        </button>
+                        <span className="w-4 text-center text-sm font-semibold tabular-nums text-foreground">{companions}</span>
+                        <button
+                          type="button"
+                          onClick={() => setCompanions((c) => Math.min(5, c + 1))}
+                          disabled={companions === 5}
+                          aria-label="Agregar acompañante"
+                          className="inline-flex size-10 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-30"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <textarea
+                      value={allergies}
+                      onChange={(e) => setAllergies(e.target.value)}
+                      placeholder="Alergias o comentarios (opcional)"
+                      rows={2}
+                      className="w-full resize-none rounded-2xl border border-border bg-background px-5 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </>
+                )}
+
+                {step === 2 && attending === "no" && (
+                  <p className="rounded-2xl border border-dashed border-border px-5 py-6 text-center text-sm leading-relaxed text-muted-foreground">
+                    Lamentamos que no puedas acompañarnos, {name.split(" ")[0]}. Gracias por tomarte el tiempo de responder.
+                  </p>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
-          {attending === "si" && (
-            <>
-              <div className="flex items-center justify-between rounded-full border border-border px-5 py-2.5">
-                <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users size={14} /> Acompañantes
-                </span>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setCompanions((c) => Math.max(0, c - 1))}
-                    disabled={companions === 0}
-                    aria-label="Quitar acompañante"
-                    className="inline-flex size-10 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-30"
-                  >
-                    −
-                  </button>
-                  <span className="w-4 text-center text-sm font-semibold tabular-nums text-foreground">{companions}</span>
-                  <button
-                    type="button"
-                    onClick={() => setCompanions((c) => Math.min(5, c + 1))}
-                    disabled={companions === 5}
-                    aria-label="Agregar acompañante"
-                    className="inline-flex size-10 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-30"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              <textarea
-                value={allergies}
-                onChange={(e) => setAllergies(e.target.value)}
-                placeholder="Alergias o comentarios (opcional)"
-                rows={2}
-                className="w-full resize-none rounded-2xl border border-border bg-background px-5 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </>
-          )}
-          <button
-            type="submit"
-            className="rounded-full px-5 py-3.5 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-90 active:scale-[0.97]"
-            style={{ backgroundColor: "var(--wed-accent)" }}
-          >
-            Confirmar asistencia
-          </button>
-          <p className="text-center text-[11px] text-muted-foreground">
+
+          <div className="mt-4 flex items-center gap-2">
+            {step > 0 && (
+              <button
+                type="button"
+                onClick={() => goTo(step - 1)}
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border px-5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <ArrowLeft size={14} /> Atrás
+              </button>
+            )}
+            <Magnetic className="flex-1">
+              <button
+                type="submit"
+                disabled={!canAdvance}
+                className="min-h-11 w-full rounded-full px-5 py-3 text-sm font-medium text-white transition-[opacity,transform] hover:opacity-90 active:scale-[0.97] disabled:opacity-40"
+                style={{ backgroundColor: "var(--wed-accent)" }}
+              >
+                {step < 2 ? "Continuar" : attending === "si" ? "Confirmar asistencia" : "Enviar respuesta"}
+              </button>
+            </Magnetic>
+          </div>
+          <p className="mt-3 text-center text-[11px] text-muted-foreground">
             Tu confirmación se guarda en este navegador y los novios la revisan desde su panel.
           </p>
         </form>
@@ -1808,11 +2095,14 @@ function MobileBodaNav() {
 /* --------------------------------- Página ---------------------------------- */
 
 export function BodaClient() {
-  const { wedding, hydrated, rsvps, wishes } = useEvent();
+  const { wedding, details, hydrated, rsvps, wishes } = useEvent();
+  const palette = usePaletteHotkey();
+  const isMobile = useIsMobile();
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<string | null>(null);
   const [guestMode, setGuestMode] = useState(false);
   const [rsvpsOpen, setRsvpsOpen] = useState(false);
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
   // undefined = aún no leído el hash; null = sin enlace compartido; WeddingShare = modo compartido
   const [shared, setShared] = useState<WeddingShare | null | undefined>(undefined);
 
@@ -1836,10 +2126,23 @@ export function BodaClient() {
     setGuestMode(true);
   };
 
+  const openQr = () => {
+    const hash = encodeWeddingShare(wedding, details);
+    setQrUrl(`${window.location.origin}/mi-evento/boda#s=${hash}`);
+  };
+
   if (shared === undefined || (!shared && !hydrated)) {
     return (
-      <main className="editorial flex min-h-screen items-center justify-center bg-background">
-        <div className="h-40 w-full max-w-3xl animate-pulse rounded-3xl bg-secondary" />
+      <main className="editorial flex min-h-screen flex-col items-center justify-center gap-8 bg-background" aria-busy="true" aria-label="Cargando la página de la boda">
+        <Skeleton className="h-20 w-20 rounded-full" />
+        <Skeleton className="h-10 w-64 max-w-[70vw]" />
+        <Skeleton className="h-4 w-40" />
+        <div className="flex gap-3">
+          <Skeleton className="h-20 w-16 rounded-2xl" />
+          <Skeleton className="h-20 w-16 rounded-2xl" />
+          <Skeleton className="h-20 w-16 rounded-2xl" />
+          <Skeleton className="h-20 w-16 rounded-2xl" />
+        </div>
       </main>
     );
   }
@@ -1855,6 +2158,40 @@ export function BodaClient() {
   const names = coupleNames(viewWedding);
   const theme = THEMES[viewWedding.theme] ?? THEMES.arena;
 
+  const copyShareLink = async () => {
+    try {
+      const hash = encodeWeddingShare(wedding, details);
+      await navigator.clipboard.writeText(`${window.location.origin}/mi-evento/boda#s=${hash}`);
+      toast.success("Enlace para invitados copiado");
+    } catch {
+      toast.error("No pudimos copiar el enlace");
+    }
+  };
+
+  const paletteGroups: PaletteGroup[] = [
+    {
+      heading: "Ir a",
+      actions: BODA_SECTIONS.map((s) => ({
+        id: `nav-${s.id}`,
+        label: s.label,
+        icon: <ArrowLeft size={16} className="rotate-[-90deg]" aria-hidden="true" />,
+        onSelect: () => scrollToSection(s.id),
+      })),
+    },
+    {
+      heading: "Acciones",
+      actions: [
+        { id: "act-portada", label: "Editar portada", icon: <Camera size={16} />, keywords: ["hero", "foto", "nombres"], onSelect: () => openEdit("edit-portada") },
+        { id: "act-invitado", label: "Ver como invitado", icon: <Eye size={16} />, keywords: ["preview", "vista"], onSelect: enterGuestMode },
+        { id: "act-copiar", label: "Copiar enlace para invitados", icon: <Link2 size={16} />, keywords: ["compartir", "link"], onSelect: copyShareLink },
+        { id: "act-qr", label: "QR de invitación", icon: <QrCode size={16} />, keywords: ["código", "imprimir", "descargar"], onSelect: openQr },
+        ...(rsvps.length > 0
+          ? [{ id: "act-rsvps", label: `Ver respuestas (${rsvps.length})`, icon: <ClipboardList size={16} />, keywords: ["confirmaciones", "asistencia"], onSelect: () => setRsvpsOpen(true) }]
+          : []),
+      ],
+    },
+  ];
+
   return (
     <BodaViewDetailsContext.Provider value={viewDetails}>
       <GuestModeContext.Provider value={effectiveGuestMode}>
@@ -1862,6 +2199,12 @@ export function BodaClient() {
           className="editorial themed min-h-screen bg-background"
           style={{ "--wed-accent": theme.accent, "--wed-soft": theme.soft } as CSSProperties}
         >
+          <a
+            href="#detalles"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[80] focus:rounded-full focus:bg-foreground focus:px-4 focus:py-2 focus:text-sm focus:text-background"
+          >
+            Saltar al contenido
+          </a>
           {!shared && (
             <BodaToolbar
               onEdit={() => openEdit("edit-portada")}
@@ -1871,6 +2214,8 @@ export function BodaClient() {
               onShowRsvps={() => setRsvpsOpen(true)}
               wishCount={wishes.length}
               onShowWishes={() => document.getElementById("deseos")?.scrollIntoView({ behavior: "smooth" })}
+              onOpenPalette={() => palette.setOpen(true)}
+              onShowQr={openQr}
             />
           )}
           {!shared && guestMode && <GuestModeBanner onExit={() => setGuestMode(false)} />}
@@ -1879,6 +2224,23 @@ export function BodaClient() {
           <MobileBodaNav />
           {!shared && <EditSheet open={editOpen} onOpenChange={setEditOpen} target={editTarget} />}
           {!shared && <RsvpSheet open={rsvpsOpen} onOpenChange={setRsvpsOpen} />}
+          {!shared && (
+            <QrInvitationSheet
+              open={qrUrl !== null}
+              onOpenChange={(o) => {
+                if (!o) setQrUrl(null);
+              }}
+              url={qrUrl ?? ""}
+              namesLabel={names.label}
+              dateLabel={
+                details.date
+                  ? details.date.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })
+                  : ""
+              }
+            />
+          )}
+          {!shared && <CommandPalette open={palette.open} onOpenChange={palette.setOpen} groups={paletteGroups} placeholder="Busca una sección o acción…" />}
+          <Toaster position={isMobile ? "bottom-center" : "bottom-right"} />
           <ScrollProgress />
           <HeroSection wedding={viewWedding} onEdit={() => openEdit("edit-portada")} />
           <Reveal>

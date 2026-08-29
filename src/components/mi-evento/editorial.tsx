@@ -1,19 +1,46 @@
 import { useEffect, useRef, useState } from "react";
-import { animate } from "framer-motion";
+import { animate, motion, useReducedMotion } from "framer-motion";
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
+
+/* Revelado escalonado que respeta prefers-reduced-motion: fade + lift 8px con spring suave. */
+export function FadeUp({
+  index = 0,
+  className,
+  children,
+}: {
+  index?: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      className={className}
+      initial={reduce ? false : { opacity: 0, y: 8 }}
+      whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-48px" }}
+      transition={{ duration: 0.45, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 export function CountUp({
   value,
   duration = 1.1,
   once = false,
   className,
+  format,
 }: {
   value: number;
   duration?: number;
   /** Anima solo la primera vez; cambios posteriores se aplican directo (p. ej. cuenta regresiva). */
   once?: boolean;
   className?: string;
+  /** Formatea el número mostrado (p. ej. moneda). */
+  format?: (n: number) => string;
 }) {
   const [display, setDisplay] = useState(once ? 0 : value);
   const prev = useRef(0);
@@ -35,7 +62,7 @@ export function CountUp({
     prev.current = value;
     return () => controls.stop();
   }, [value, duration, once]);
-  return <span className={className}>{display}</span>;
+  return <span className={className}>{format ? format(display) : display}</span>;
 }
 
 /* Encabezado editorial centrado: eyebrow con líneas hairline + título serif. */
@@ -91,5 +118,76 @@ export function OrnamentDivider({ className, ...rest }: HTMLAttributes<HTMLDivEl
       <span className="block h-1.5 w-1.5 rotate-45 border border-gold/70" />
       <span className="h-px w-16 bg-gradient-to-l from-transparent to-gold/50 md:w-24" />
     </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Micro-interacciones premium (solo pointer fino; sin efecto en touch ni con
+ * prefers-reduced-motion).
+ * ------------------------------------------------------------------------- */
+
+const canHover = () =>
+  typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+/* Hover magnético: el contenido se desplaza ±4px hacia el cursor con spring. */
+export function Magnetic({ children, className }: { children: ReactNode; className?: string }) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const enabled = !reduce && canHover();
+
+  return (
+    <motion.div
+      ref={ref}
+      className={cn("inline-block", className)}
+      animate={{ x: offset.x, y: offset.y }}
+      transition={{ type: "spring", stiffness: 220, damping: 16, mass: 0.6 }}
+      onMouseMove={
+        enabled
+          ? (e) => {
+              const rect = ref.current?.getBoundingClientRect();
+              if (!rect) return;
+              const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+              const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+              setOffset({ x: dx * 4, y: dy * 4 });
+            }
+          : undefined
+      }
+      onMouseLeave={enabled ? () => setOffset({ x: 0, y: 0 }) : undefined}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* Tilt 3D suave (≤4°) para tarjetas y fotos. */
+export function Tilt({ children, className }: { children: ReactNode; className?: string }) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const [rot, setRot] = useState({ x: 0, y: 0 });
+  const enabled = !reduce && canHover();
+
+  return (
+    <motion.div
+      ref={ref}
+      className={className}
+      style={{ transformPerspective: 800 }}
+      animate={{ rotateX: rot.x, rotateY: rot.y }}
+      transition={{ type: "spring", stiffness: 180, damping: 18, mass: 0.7 }}
+      onMouseMove={
+        enabled
+          ? (e) => {
+              const rect = ref.current?.getBoundingClientRect();
+              if (!rect) return;
+              const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+              const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+              setRot({ x: -dy * 4, y: dx * 4 });
+            }
+          : undefined
+      }
+      onMouseLeave={enabled ? () => setRot({ x: 0, y: 0 }) : undefined}
+    >
+      {children}
+    </motion.div>
   );
 }
