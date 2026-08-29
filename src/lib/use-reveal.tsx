@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { motion } from "framer-motion";
 
 /**
  * Anima la aparición de un elemento al entrar al viewport (IntersectionObserver).
@@ -40,7 +41,7 @@ export function useReveal<T extends HTMLElement>(delay = 0) {
   return { ref, style, visible };
 }
 
-/** Wrapper listo para usar: anima a sus hijos al entrar al viewport. */
+/** Wrapper listo para usar: anima a sus hijos al entrar al viewport (spring suave). */
 export function Reveal({
   children,
   delay = 0,
@@ -50,10 +51,15 @@ export function Reveal({
   delay?: number;
   className?: string;
 }) {
-  const { ref, style } = useReveal<HTMLDivElement>(delay);
   return (
-    <div ref={ref} style={style} className={className}>
+    <motion.div
+      initial={{ opacity: 0, y: 28 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.12 }}
+      transition={{ type: "spring", stiffness: 64, damping: 18, delay: delay / 1000 }}
+      className={className}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 }

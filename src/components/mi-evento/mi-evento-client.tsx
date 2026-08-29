@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpDown,
   BadgeCheck,
   CakeSlice,
   CalendarDays,
@@ -14,10 +15,13 @@ import {
   Check,
   CircleDashed,
   CircleDot,
+  Download,
   Gem,
   Heart,
   Hourglass,
   Landmark,
+  Link2,
+  ListTodo,
   Moon,
   Music,
   Palette,
@@ -31,7 +35,9 @@ import {
   Star,
   Sun,
   Trash2,
+  Trophy,
   Undo2,
+  Upload,
   Users,
   UtensilsCrossed,
   Wallet,
@@ -39,13 +45,18 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { FadeImage } from "@/components/fade-image";
+import { CountUp, SectionLabel } from "@/components/mi-evento/editorial";
 import { Calendar } from "@/components/ui/calendar";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Slider } from "@/components/ui/slider";
-import { useEvent, type EventItem, type EventType, type ItemStatus } from "@/lib/event-context";
-import { CATEGORIES, formatMXN, type Vendor, type VendorCategory } from "@/lib/marketplace-data";
+import { SUGGESTED_TASKS, encodeWeddingShare, useEvent, type EventItem, type EventTask, type EventType, type ItemStatus } from "@/lib/event-context";
+import { CATEGORIES, VENDORS, formatMXN, type Vendor, type VendorCategory } from "@/lib/marketplace-data";
 import { recommendVendors, type Recommendation } from "@/lib/recommendations";
 import { Reveal } from "@/lib/use-reveal";
+import { scrollToSection } from "@/lib/use-scroll-spy";
 import { cn } from "@/lib/utils";
 
 const APARTADO_PCT = 0.1;
@@ -70,6 +81,68 @@ const CATEGORY_ICONS: Record<VendorCategory, LucideIcon> = {
 };
 
 const categoryIcon = (slug: VendorCategory) => CATEGORY_ICONS[slug] ?? Sparkles;
+
+/* ------------------------------ Plantillas -------------------------------- */
+
+const EVENT_TEMPLATES: { id: string; label: string; icon: LucideIcon; type: EventType; categories: VendorCategory[] }[] = [
+  { id: "boda-clasica", label: "Boda clásica", icon: Heart, type: "boda", categories: ["venues", "catering", "fotografia", "musica", "decoracion", "pasteleria"] },
+  { id: "xv-sonados", label: "XV soñados", icon: Gem, type: "xv", categories: ["venues", "catering", "fotografia", "musica", "decoracion", "mesa-de-dulces"] },
+  { id: "cumpleanos", label: "Cumpleaños", icon: CakeSlice, type: "cumpleanos", categories: ["catering", "musica", "pasteleria", "mesa-de-dulces", "fotografia"] },
+  { id: "corporativo", label: "Corporativo", icon: Landmark, type: "corporativo", categories: ["venues", "catering", "musica", "fotografia"] },
+];
+
+function TemplatePicker({ compact }: { compact?: boolean }) {
+  const { addItem, updateDetails, items } = useEvent();
+
+  const applyTemplate = (template: (typeof EVENT_TEMPLATES)[number]) => {
+    updateDetails({ type: template.type });
+    const covered = new Set(items.map((i) => i.vendor.category));
+    for (const cat of template.categories) {
+      if (covered.has(cat)) continue;
+      const best = VENDORS.filter((v) => v.category === cat).sort((a, b) => b.rating - a.rating)[0];
+      if (best) addItem(best);
+    }
+  };
+
+  if (compact) {
+    return (
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {EVENT_TEMPLATES.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => applyTemplate(t)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+          >
+            <t.icon size={12} aria-hidden="true" />
+            {t.label}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid w-full max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
+      {EVENT_TEMPLATES.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => applyTemplate(t)}
+          className="group flex flex-col items-center gap-2 rounded-2xl border border-border p-4 text-center transition-all hover:-translate-y-0.5 hover:border-foreground hover:shadow-md"
+        >
+          <span className="inline-flex size-10 items-center justify-center rounded-full bg-secondary text-foreground transition-transform group-hover:scale-110">
+            <t.icon size={18} aria-hidden="true" />
+          </span>
+          <span className="text-sm font-medium text-foreground">{t.label}</span>
+          <span className="text-[11px] leading-snug text-muted-foreground">
+            {t.categories.length} servicios sugeridos
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /* ----------------------------- Estado por servicio ------------------------- */
 
@@ -141,18 +214,34 @@ function PlanningProgress({ items }: { items: EventItem[] }) {
           : "Apenas comenzando — tú puedes.";
 
   return (
-    <div {...fade(350, "mt-6 max-w-md")}>
-      <div className="flex items-baseline justify-between text-xs">
-        <span className="font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          Tu planeación va {pct}%
-        </span>
-        <span className="text-muted-foreground">{message}</span>
-      </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/10">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-foreground/50 to-foreground transition-all duration-700"
-          style={{ width: `${pct}%` }}
+    <div {...fade(350, "mt-6 flex max-w-md items-center gap-4")}>
+      <svg viewBox="0 0 40 40" className="size-11 shrink-0 -rotate-90" aria-hidden="true">
+        <circle cx="20" cy="20" r="16" fill="none" strokeWidth="4" className="stroke-foreground/10" />
+        <circle
+          cx="20"
+          cy="20"
+          r="16"
+          fill="none"
+          strokeWidth="4"
+          strokeLinecap="round"
+          className="stroke-foreground transition-all duration-700"
+          strokeDasharray={2 * Math.PI * 16}
+          strokeDashoffset={2 * Math.PI * 16 * (1 - pct / 100)}
         />
+      </svg>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2 text-xs">
+          <span className="font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Tu planeación va {pct}%
+          </span>
+          <span className="truncate text-muted-foreground">{message}</span>
+        </div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/10">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-foreground/50 to-foreground transition-all duration-700"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -178,7 +267,9 @@ function MiEventoHeader({ count }: { count: number }) {
       <div
         className={cn(
           "flex items-center justify-between rounded-full px-5 py-3 transition-all duration-300",
-          isScrolled ? "bg-foreground/85 shadow-2xl backdrop-blur-md" : "bg-foreground shadow-lg"
+          isScrolled
+            ? "border border-[#e7c887]/20 bg-foreground/85 shadow-[0_20px_60px_-30px_rgba(28,25,23,0.6)] backdrop-blur-xl"
+            : "border border-transparent bg-foreground shadow-lg"
         )}
       >
         <div className="flex items-center gap-4">
@@ -228,25 +319,31 @@ function SummaryBar({ items }: { items: EventItem[] }) {
   const pct = Math.min(100, Math.round((total / details.budget) * 100));
   const apartados = items.filter((i) => i.status === "apartado" || i.status === "confirmado").length;
 
-  const pills = [
+  const pills: { icon: LucideIcon; key: string; label: ReactNode }[] = [
     {
       icon: CalendarDays,
+      key: "fecha",
       label: details.date
         ? details.date.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })
         : "Sin fecha",
     },
-    { icon: Users, label: `${details.guests} invitados` },
-    { icon: Sparkles, label: `${items.length} ${items.length === 1 ? "servicio" : "servicios"}` },
-    { icon: Wallet, label: `${pct}% del presupuesto` },
+    { icon: Users, key: "invitados", label: <><CountUp value={details.guests} /> invitados</> },
+    {
+      icon: Sparkles,
+      key: "servicios",
+      label: <><CountUp value={items.length} /> {items.length === 1 ? "servicio" : "servicios"}</>,
+    },
+    { icon: Wallet, key: "presupuesto", label: <><CountUp value={pct} />% del presupuesto</> },
   ];
 
   if (items.length > 0) {
     pills.push({
       icon: BadgeCheck,
+      key: "apartados",
       label:
         apartados === 0
           ? "Ninguno apartado aún"
-          : `${apartados} de ${items.length} ${items.length === 1 ? "apartado" : "apartados"}`,
+          : <><CountUp value={apartados} /> de {items.length} {items.length === 1 ? "apartado" : "apartados"}</>,
     });
   }
 
@@ -255,17 +352,18 @@ function SummaryBar({ items }: { items: EventItem[] }) {
     if (daysLeft >= 0) {
       pills.splice(1, 0, {
         icon: Hourglass,
-        label: daysLeft === 0 ? "¡Es hoy!" : daysLeft === 1 ? "¡Falta 1 día!" : `Faltan ${daysLeft} días`,
+        key: "cuenta",
+        label: daysLeft === 0 ? "¡Es hoy!" : daysLeft === 1 ? "¡Falta 1 día!" : <>Faltan <CountUp value={daysLeft} /> días</>,
       });
     }
   }
 
   return (
-    <div {...fade(300, "mt-8 flex flex-wrap gap-2")}>
+    <div {...fade(300, "mt-8 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden")}>
       {pills.map((p) => (
         <span
-          key={p.label}
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-4 py-2 text-xs font-medium text-foreground backdrop-blur-sm"
+          key={p.key}
+          className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-background/80 px-4 py-2 text-xs font-medium text-foreground backdrop-blur-sm"
         >
           <p.icon size={13} className="text-muted-foreground" />
           {p.label}
@@ -310,10 +408,11 @@ function SectionNav({ show }: { show: boolean }) {
     { id: "detalles", label: "Detalles" },
     { id: "servicios", label: "Servicios" },
     { id: "presupuesto", label: "Presupuesto" },
+    { id: "tareas", label: "Tareas" },
   ];
   return (
     <nav
-      {...fade(200, "sticky top-24 z-40 mx-auto flex w-fit gap-1 rounded-full border border-border bg-background/85 p-1.5 shadow-lg backdrop-blur-md")}
+      {...fade(200, "sticky top-24 z-40 mx-auto flex w-fit gap-1 rounded-full border border-border bg-background/80 p-1.5 shadow-[0_20px_60px_-30px_rgba(28,25,23,0.4)] backdrop-blur-xl")}
       aria-label="Secciones de tu evento"
     >
       {links.map((l) => (
@@ -371,12 +470,12 @@ function EventDatePicker({ date, onChange }: { date?: Date; onChange: (d?: Date)
 }
 
 function DetailsSection() {
-  const { details, updateDetails } = useEvent();
+  const { details, updateDetails, items } = useEvent();
   return (
     <section {...fade(200)}>
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Detalles de tu evento</p>
+      <SectionLabel>Detalles de tu evento</SectionLabel>
       <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border p-5">
+        <div className="card-lift rounded-2xl border border-border p-5">
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             <Sparkles size={14} /> Tipo de evento
           </p>
@@ -397,8 +496,14 @@ function DetailsSection() {
               </button>
             ))}
           </div>
+          {items.length === 0 && (
+            <div className="mt-4 border-t border-border pt-3">
+              <p className="text-[11px] text-muted-foreground">¿Quieres una base rápida? Prueba una plantilla:</p>
+              <TemplatePicker compact />
+            </div>
+          )}
         </div>
-        <div className="rounded-2xl border border-border p-5">
+        <div className="card-lift rounded-2xl border border-border p-5">
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             <CalendarDays size={14} /> Fecha
           </p>
@@ -409,7 +514,7 @@ function DetailsSection() {
           </p>
           <EventDatePicker date={details.date} onChange={(d) => updateDetails({ date: d })} />
         </div>
-        <div className="rounded-2xl border border-border p-5">
+        <div className="card-lift rounded-2xl border border-border p-5">
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             <Users size={14} /> Invitados
           </p>
@@ -428,7 +533,7 @@ function DetailsSection() {
             <span>500</span>
           </div>
         </div>
-        <div className="rounded-2xl border border-border p-5">
+        <div className="card-lift rounded-2xl border border-border p-5">
           <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             <Wallet size={14} /> Presupuesto objetivo
           </p>
@@ -455,6 +560,20 @@ function DetailsSection() {
 /* ------------------------------ CTA de boda -------------------------------- */
 
 function WeddingCTA() {
+  const { wedding, details } = useEvent();
+  const [copied, setCopied] = useState(false);
+
+  const copyGuestLink = async () => {
+    try {
+      const code = encodeWeddingShare(wedding, details);
+      await navigator.clipboard.writeText(`${window.location.origin}/mi-evento/boda#s=${code}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard unavailable
+    }
+  };
+
   return (
     <section {...fade(250)}>
       <Link
@@ -479,6 +598,20 @@ function WeddingCTA() {
           Empezar ahora <ArrowRight size={15} />
         </span>
       </Link>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          El enlace incluye todos los datos de tu página; tus invitados la verán en modo lectura.
+        </p>
+        <button
+          type="button"
+          onClick={copyGuestLink}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+          title="Copia el enlace de la página de tu boda para compartirlo con tus invitados"
+        >
+          {copied ? <Check size={12} /> : <Link2 size={12} />}
+          {copied ? "¡Enlace copiado!" : "Copiar enlace para invitados"}
+        </button>
+      </div>
     </section>
   );
 }
@@ -494,12 +627,12 @@ function ChecklistSection({ items }: { items: EventItem[] }) {
   return (
     <section {...fade(300)}>
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Checklist de tu evento</p>
+        <SectionLabel>Checklist de tu evento</SectionLabel>
         <p className="text-sm text-muted-foreground">
           {covered.size} de {CATEGORIES.length} categorías
         </p>
       </div>
-      <div className="mt-4 flex flex-col gap-6 rounded-2xl border border-border p-6 sm:flex-row sm:items-center">
+      <div className="card-lift mt-4 flex flex-col gap-6 rounded-2xl border border-border p-6 sm:flex-row sm:items-center">
         <div className="relative mx-auto size-20 shrink-0 sm:mx-0">
           <svg viewBox="0 0 64 64" className="size-20 -rotate-90">
             <circle cx="32" cy="32" r={r} fill="none" strokeWidth="6" className="stroke-secondary" />
@@ -702,8 +835,33 @@ function ClearEventButton() {
   );
 }
 
-function ServicesSection({ items, onRemoveItem }: { items: EventItem[]; onRemoveItem: (item: EventItem) => void }) {
+type ServicesSort = "categoria" | "precio" | "estado";
+
+const STATUS_ORDER: { id: ItemStatus; label: string; icon: LucideIcon }[] = [
+  { id: "pendiente", label: "Pendientes", icon: CircleDashed },
+  { id: "apartado", label: "Apartados", icon: Hourglass },
+  { id: "confirmado", label: "Confirmados", icon: BadgeCheck },
+];
+
+function ServicesSection({ items, onRemoveItem, compareIds, onToggleCompare }: { items: EventItem[]; onRemoveItem: (item: EventItem) => void; compareIds: string[]; onToggleCompare: (vendor: Vendor) => void }) {
+  const [sort, setSort] = useState<ServicesSort>("categoria");
   const groups = useMemo(() => {
+    if (sort === "precio") {
+      return [
+        {
+          label: "Mayor a menor precio",
+          icon: ArrowUpDown,
+          items: [...items].sort((a, b) => b.vendor.basePrice - a.vendor.basePrice),
+        },
+      ];
+    }
+    if (sort === "estado") {
+      return STATUS_ORDER.map((s) => ({
+        label: s.label,
+        icon: s.icon,
+        items: items.filter((i) => (i.status ?? "pendiente") === s.id),
+      })).filter((g) => g.items.length > 0);
+    }
     const map = new Map<string, { label: string; icon: LucideIcon; items: EventItem[] }>();
     for (const item of items) {
       const key = item.vendor.category;
@@ -719,15 +877,28 @@ function ServicesSection({ items, onRemoveItem }: { items: EventItem[]; onRemove
       }
     }
     return [...map.values()];
-  }, [items]);
+  }, [items, sort]);
 
   return (
     <section {...fade(400)}>
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Servicios de tu evento</p>
-        <Link href="/marketplace" className="inline-flex items-center gap-1 text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground">
-          Agregar más <ArrowRight size={13} />
-        </Link>
+      <div className="flex items-center justify-between gap-3">
+        <SectionLabel>Servicios de tu evento</SectionLabel>
+        <div className="flex items-center gap-3">
+          <Select value={sort} onValueChange={(v) => setSort(v as ServicesSort)}>
+            <SelectTrigger className="h-8 w-auto gap-1.5 rounded-full border-border px-3 text-xs" aria-label="Ordenar servicios">
+              <ArrowUpDown size={11} aria-hidden="true" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="categoria">Por categoría</SelectItem>
+              <SelectItem value="precio">Por precio</SelectItem>
+              <SelectItem value="estado">Por estado</SelectItem>
+            </SelectContent>
+          </Select>
+          <Link href="/marketplace" className="inline-flex items-center gap-1 text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground">
+            Agregar más <ArrowRight size={13} />
+          </Link>
+        </div>
       </div>
       <div className="mt-4 flex flex-col gap-8">
         {groups.map((group) => (
@@ -743,10 +914,10 @@ function ServicesSection({ items, onRemoveItem }: { items: EventItem[]; onRemove
               {group.items.map((item, i) => (
                 <li
                   key={item.vendor.id}
-                  className="flex animate-fade-in items-center gap-4 rounded-2xl border border-border p-4 opacity-0 transition-shadow hover:shadow-md"
+                  className="card-lift flex animate-fade-in flex-col gap-4 rounded-2xl border border-border p-4 opacity-0 sm:flex-row sm:items-center"
                   style={{ animationDelay: `${400 + i * 70}ms`, animationFillMode: "forwards" }}
                 >
-                  <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-secondary">
+                  <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-secondary sm:h-20 sm:w-24">
                     <FadeImage src={item.vendor.images[0]} alt={item.vendor.name} fill className="object-cover" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -760,9 +931,16 @@ function ServicesSection({ items, onRemoveItem }: { items: EventItem[]; onRemove
                     <div className="mt-2">
                       <ItemStatusChip item={item} />
                     </div>
+                    <ItemDeadlineChip item={item} />
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-2.5">
+                  <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2.5 sm:w-auto sm:flex-col sm:items-end">
                     <span className="text-sm font-semibold text-foreground">{formatMXN(item.vendor.basePrice)}</span>
+                    <CompareToggle
+                      active={compareIds.includes(item.vendor.id)}
+                      disabled={compareIds.length >= MAX_COMPARE}
+                      onToggle={() => onToggleCompare(item.vendor)}
+                      label={item.vendor.name}
+                    />
                     <button
                       type="button"
                       onClick={() => onRemoveItem(item)}
@@ -785,15 +963,226 @@ function ServicesSection({ items, onRemoveItem }: { items: EventItem[]; onRemove
   );
 }
 
+/* ------------------------------ Comparador --------------------------------- */
+
+const MAX_COMPARE = 3;
+
+function CompareToggle({ active, disabled, onToggle, label }: { active: boolean; disabled: boolean; onToggle: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={!active && disabled}
+      aria-pressed={active}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+        active
+          ? "border-foreground bg-foreground text-background"
+          : "border-border text-muted-foreground hover:border-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+      )}
+      title={!active && disabled ? `Puedes comparar hasta ${MAX_COMPARE}` : `Comparar ${label}`}
+    >
+      {active ? <Check size={11} /> : <Plus size={11} />}
+      Comparar
+    </button>
+  );
+}
+
+function CompareSheet({
+  vendors,
+  items,
+  open,
+  onOpenChange,
+  onRemove,
+}: {
+  vendors: Vendor[];
+  items: EventItem[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onRemove: (vendorId: string) => void;
+}) {
+  const bestPriceId = vendors.length > 1 ? vendors.reduce((min, v) => (v.basePrice < min.basePrice ? v : min)).id : null;
+  const bestRatingId = vendors.length > 1 ? vendors.reduce((max, v) => (v.rating > max.rating ? v : max)).id : null;
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-2xl">
+        <SheetHeader>
+          <SheetTitle className="font-serif text-2xl">Comparar proveedores</SheetTitle>
+          <SheetDescription>
+            Lado a lado: precio, rating y apartado. Máximo {MAX_COMPARE} a la vez.
+          </SheetDescription>
+        </SheetHeader>
+        {vendors.length === 0 ? (
+          <p className="mt-8 text-sm text-muted-foreground">No hay proveedores seleccionados.</p>
+        ) : (
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full min-w-[480px] border-separate border-spacing-0 text-sm">
+              <thead>
+                <tr>
+                  <th className="w-28" />
+                  {vendors.map((v) => (
+                    <th key={v.id} className="border-l border-border p-3 align-top first:border-l-0">
+                      <div className="relative h-24 w-full overflow-hidden rounded-xl bg-secondary">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={v.images[0]} alt={v.name} className="h-full w-full object-cover" />
+                      </div>
+                      <p className="mt-2 text-left text-sm font-semibold leading-snug text-foreground">{v.name}</p>
+                      <p className="text-left text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{v.categoryLabel}</p>
+                      <button
+                        type="button"
+                        onClick={() => onRemove(v.id)}
+                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground underline underline-offset-2 hover:text-destructive"
+                      >
+                        <Trash2 size={10} /> Quitar
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="[&_td]:border-l [&_td]:border-border [&_td]:p-3 [&_td]:align-top [&_td:first-child]:border-l-0 [&_td:first-child]:text-xs [&_td:first-child]:font-medium [&_td:first-child]:text-muted-foreground [&_tr]:border-t [&_tr]:border-border">
+                <tr>
+                  <td>Precio base</td>
+                  {vendors.map((v) => (
+                    <td key={v.id} className="font-semibold text-foreground">
+                      {formatMXN(v.basePrice)}
+                      <span className="block text-[11px] font-normal text-muted-foreground">{v.priceUnit}</span>
+                      {v.id === bestPriceId && (
+                        <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
+                          <Trophy size={9} aria-hidden="true" /> Mejor precio
+                        </span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td>Rating</td>
+                  {vendors.map((v) => (
+                    <td key={v.id}>
+                      <span className="inline-flex items-center gap-1 text-foreground">
+                        <Star size={12} className="fill-foreground" aria-hidden="true" />
+                        {v.rating.toFixed(1)}
+                      </span>
+                      {v.id === bestRatingId && (
+                        <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
+                          <Trophy size={9} aria-hidden="true" /> Mejor rating
+                        </span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td>Apartado hoy (10%)</td>
+                  {vendors.map((v) => (
+                    <td key={v.id} className="font-medium text-foreground">
+                      {formatMXN(apartadoDe(v.basePrice))}
+                    </td>
+                  ))}
+                </tr>
+                <tr>
+                  <td>Tu nota</td>
+                  {vendors.map((v) => {
+                    const note = items.find((i) => i.vendor.id === v.id)?.note;
+                    return (
+                      <td key={v.id} className="text-xs text-muted-foreground">
+                        {note?.trim() || "—"}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function CompareBar({ count, lifted, onOpen }: { count: number; lifted: boolean; onOpen: () => void }) {
+  if (count === 0) return null;
+  return (
+    <div className={cn("fixed inset-x-0 z-40 flex justify-center px-6", lifted ? "bottom-40 md:bottom-24" : "bottom-24 md:bottom-6")}>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="inline-flex animate-scale-in items-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-sm font-medium text-background shadow-xl transition-transform hover:scale-[1.03]"
+      >
+        Comparar proveedores ({count})
+        <ArrowRight size={15} />
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------ CTA móvil ---------------------------------- */
+
+function MobileCtaBar({ items }: { items: EventItem[] }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 320);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  if (items.length === 0) return null;
+  const total = items.reduce((s, i) => s + i.vendor.basePrice, 0);
+
+  return (
+    <div
+      className={cn(
+        "fixed inset-x-3 bottom-3 z-50 transition-all duration-300 md:hidden",
+        visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
+      )}
+      style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div className="flex items-center justify-between gap-3 rounded-full border border-[#e7c887]/20 bg-foreground/90 px-5 py-2.5 shadow-xl backdrop-blur-xl">
+        <div className="min-w-0 text-background">
+          <p className="truncate text-xs font-semibold">
+            {items.length} {items.length === 1 ? "servicio" : "servicios"} · {formatMXN(total)}
+          </p>
+          <p className="text-[10px] opacity-70">Aparta hoy con solo el 10%</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => scrollToSection("apartado")}
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-background px-5 py-2.5 text-xs font-semibold text-foreground transition-transform active:scale-[0.97]"
+        >
+          Continuar <ArrowRight size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------- Fecha límite apartado ------------------------- */
+
+function ItemDeadlineChip({ item }: { item: EventItem }) {
+  const { details } = useEvent();
+  if (!details.date || (item.status ?? "pendiente") !== "pendiente") return null;
+  const deadline = new Date(details.date);
+  deadline.setDate(deadline.getDate() - 30);
+  const overdue = deadline.getTime() < Date.now();
+  return (
+    <p className={cn("mt-1.5 inline-flex items-center gap-1.5 text-[11px]", overdue ? "text-destructive" : "text-muted-foreground")}>
+      <Hourglass size={11} aria-hidden="true" />
+      {overdue
+        ? "Tu fecha está cerca: apártalo lo antes posible"
+        : `Aparta antes del ${deadline.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} para asegurar disponibilidad`}
+    </p>
+  );
+}
+
 /* ----------------------------- Recomendaciones ----------------------------- */
 
-function RecommendationCard({ rec, index }: { rec: Recommendation; index: number }) {
+function RecommendationCard({ rec, index, compareIds, onToggleCompare }: { rec: Recommendation; index: number; compareIds: string[]; onToggleCompare: (vendor: Vendor) => void }) {
   const { addItem, details } = useEvent();
   const { vendor } = rec;
 
   return (
     <article
-      className="flex animate-fade-in flex-col overflow-hidden rounded-2xl border border-border opacity-0"
+      className="card-lift flex animate-fade-in flex-col overflow-hidden rounded-2xl border border-border opacity-0"
       style={{ animationDelay: `${index * 70}ms`, animationFillMode: "forwards" }}
     >
       <div className="relative h-36 bg-secondary">
@@ -827,12 +1216,20 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
             Agregar
           </button>
         </div>
+        <div className="pt-1.5">
+          <CompareToggle
+            active={compareIds.includes(vendor.id)}
+            disabled={compareIds.length >= MAX_COMPARE}
+            onToggle={() => onToggleCompare(vendor)}
+            label={vendor.name}
+          />
+        </div>
       </div>
     </article>
   );
 }
 
-function RecommendationsSection({ items }: { items: EventItem[] }) {
+function RecommendationsSection({ items, compareIds, onToggleCompare }: { items: EventItem[]; compareIds: string[]; onToggleCompare: (vendor: Vendor) => void }) {
   const { details } = useEvent();
   const recommendations = useMemo(() => recommendVendors(items, details), [items, details]);
 
@@ -841,9 +1238,9 @@ function RecommendationsSection({ items }: { items: EventItem[] }) {
   return (
     <section {...fade(350)}>
       <div className="flex items-center justify-between">
-        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
-          <Sparkles size={14} /> Recomendados para tu evento
-        </p>
+        <SectionLabel>
+          <Sparkles size={14} aria-hidden="true" /> Recomendados para tu evento
+        </SectionLabel>
         <Link
           href="/marketplace"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
@@ -857,7 +1254,7 @@ function RecommendationsSection({ items }: { items: EventItem[] }) {
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {recommendations.map((rec, i) => (
-          <RecommendationCard key={rec.vendor.id} rec={rec} index={i} />
+          <RecommendationCard key={rec.vendor.id} rec={rec} index={i} compareIds={compareIds} onToggleCompare={onToggleCompare} />
         ))}
       </div>
     </section>
@@ -919,11 +1316,13 @@ function BudgetPanel({ items }: { items: EventItem[] }) {
 
   return (
     <aside {...fade(500, "lg:sticky lg:top-28")}>
-      <div className="rounded-2xl border border-border p-6">
+      <div className="card-lift rounded-2xl border border-border p-6">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Presupuesto</p>
-          <div className="flex gap-1.5">
+          <SectionLabel>Presupuesto</SectionLabel>
+          <div className="flex flex-wrap gap-1.5">
             <ShareSummaryButton items={items} />
+            <ExportEventButton />
+            <ImportEventButton />
             <button
               type="button"
               onClick={() => window.print()}
@@ -997,6 +1396,19 @@ function BudgetPanel({ items }: { items: EventItem[] }) {
             Aparta a todos tus proveedores con solo el 10%. El resto lo liquidas directo con cada proveedor antes de tu evento.
           </p>
         </div>
+
+        <div className="mt-3 rounded-xl border border-border px-4 py-3">
+          <div className="flex items-baseline justify-between">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
+              <Users size={12} aria-hidden="true" /> Por invitado
+            </span>
+            <span className="text-base font-semibold text-foreground">{formatMXN(Math.round(total / details.guests))}</span>
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+            Con {details.guests} invitados, cada quien “cuesta” {formatMXN(Math.round(total / details.guests))} y lo apartas
+            hoy por {formatMXN(Math.round(apartadoDe(total) / details.guests))} por persona.
+          </p>
+        </div>
       </div>
       <QuoteForm />
     </aside>
@@ -1032,13 +1444,14 @@ function QuoteForm() {
 
   return (
     <form
-      className="mt-4 flex flex-col gap-3 rounded-2xl border border-border p-6"
+      id="apartado"
+      className="mt-4 flex scroll-mt-32 flex-col gap-3 rounded-2xl border border-border p-6"
       onSubmit={(e) => {
         e.preventDefault();
         if (name.trim() && email.trim()) setSent(true);
       }}
     >
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">¿Listo para apartar?</p>
+      <SectionLabel className="justify-center">¿Listo para apartar?</SectionLabel>
       <input
         required
         value={name}
@@ -1056,7 +1469,7 @@ function QuoteForm() {
       />
       <button
         type="submit"
-        className="rounded-full bg-foreground px-5 py-3.5 text-sm font-medium text-background transition-opacity hover:opacity-90"
+        className="rounded-full bg-foreground px-5 py-3.5 text-sm font-medium text-background transition-[opacity,transform] hover:opacity-90 active:scale-[0.97]"
       >
         Solicitar cotización consolidada
       </button>
@@ -1083,6 +1496,17 @@ function EmptyState() {
       >
         Explorar servicios
       </Link>
+      <div className="mt-10 flex flex-col items-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          O empieza con una plantilla
+        </p>
+        <p className="mt-2 max-w-md text-xs leading-relaxed text-muted-foreground">
+          Un clic y te pre-agregamos los proveedores mejor valorados de las categorías clave. Luego ajustas a tu gusto.
+        </p>
+        <div className="mt-4 flex justify-center">
+          <TemplatePicker />
+        </div>
+      </div>
       <div className="mt-8 flex max-w-lg flex-wrap justify-center gap-2">
         {CATEGORIES.slice(0, 6).map((cat) => (
           <Link
@@ -1098,6 +1522,278 @@ function EmptyState() {
   );
 }
 
+/* --------------------------- Tareas de planeación -------------------------- */
+
+const TASK_DUE_OPTIONS = [180, 120, 90, 60, 45, 30, 21, 14, 7];
+
+function TasksSection() {
+  const { tasks, details, toggleTask, addTask, removeTask } = useEvent();
+  const [newLabel, setNewLabel] = useState("");
+  const [newDue, setNewDue] = useState("30");
+
+  const doneCount = tasks.filter((t) => t.done).length;
+  const pct = tasks.length === 0 ? 0 : Math.round((doneCount / tasks.length) * 100);
+  const sorted = useMemo(
+    () => [...tasks].sort((a, b) => Number(a.done) - Number(b.done) || b.dueDays - a.dueDays),
+    [tasks]
+  );
+
+  const dueDateOf = (t: EventTask) => {
+    if (!details.date) return null;
+    const d = new Date(details.date);
+    d.setDate(d.getDate() - t.dueDays);
+    return d;
+  };
+
+  const seedSuggested = () => {
+    const existing = new Set(tasks.map((t) => t.label));
+    for (const s of SUGGESTED_TASKS[details.type] ?? SUGGESTED_TASKS.otro) {
+      if (!existing.has(s.label)) addTask(s.label, s.dueDays);
+    }
+  };
+
+  const handleAdd = () => {
+    const label = newLabel.trim();
+    if (!label) return;
+    addTask(label, Number(newDue));
+    setNewLabel("");
+  };
+
+  return (
+    <section id="tareas" {...fade(450, "scroll-mt-32")}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SectionLabel>
+          <ListTodo size={14} aria-hidden="true" /> Tareas de planeación
+        </SectionLabel>
+        <div className="flex items-center gap-2">
+          {tasks.length > 0 && (
+            <span className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-foreground">
+              {doneCount} de {tasks.length}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={seedSuggested}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            title="Agrega las tareas sugeridas para tu tipo de evento"
+          >
+            <Sparkles size={12} /> Sugerir tareas
+          </button>
+        </div>
+      </div>
+
+      {tasks.length === 0 ? (
+        <div className="mt-4 flex flex-col items-center rounded-2xl border border-dashed border-border px-6 py-10 text-center">
+          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+            Además de contratar, hay mucho por hacer: enviar invitaciones, pruebas de menú, confirmar asistencias…
+            Crea tu primera tarea o deja que te sugiramos las típicas según tu tipo de evento.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-secondary">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-foreground/50 to-foreground transition-all duration-700"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <ul className="mt-5 grid gap-2.5 md:grid-cols-2">
+            {sorted.map((t) => {
+              const due = dueDateOf(t);
+              const overdue = !t.done && due !== null && due.getTime() < Date.now();
+              return (
+                <li
+                  key={t.id}
+                  className={cn(
+                    "group flex items-center gap-3 rounded-xl border border-border px-4 py-3 transition-colors",
+                    t.done && "bg-secondary/60"
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleTask(t.id)}
+                    aria-pressed={t.done}
+                    aria-label={t.done ? `Marcar pendiente: ${t.label}` : `Marcar hecha: ${t.label}`}
+                    className={cn(
+                      "inline-flex size-6 shrink-0 items-center justify-center rounded-full border transition-colors",
+                      t.done ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground"
+                    )}
+                  >
+                    {t.done && <Check size={13} />}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <p className={cn("truncate text-sm font-medium text-foreground", t.done && "text-muted-foreground line-through")}>
+                      {t.label}
+                    </p>
+                    <p className={cn("mt-0.5 inline-flex items-center gap-1 text-[11px]", overdue ? "font-medium text-destructive" : "text-muted-foreground")}>
+                      <Hourglass size={10} aria-hidden="true" />
+                      {due
+                        ? overdue
+                          ? `Venció el ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`
+                          : `Antes del ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`
+                        : `${t.dueDays} días antes del evento`}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeTask(t.id)}
+                    className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-opacity hover:bg-secondary hover:text-destructive group-hover:opacity-100"
+                    aria-label={`Eliminar tarea ${t.label}`}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+
+      <form
+        className="mt-4 flex flex-wrap items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleAdd();
+        }}
+      >
+        <input
+          value={newLabel}
+          onChange={(e) => setNewLabel(e.target.value)}
+          placeholder="Nueva tarea… (ej. contratar mariachi)"
+          className="min-w-0 flex-1 rounded-full border border-border bg-transparent px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-foreground focus:outline-none"
+          aria-label="Nueva tarea"
+        />
+        <Select value={newDue} onValueChange={setNewDue}>
+          <SelectTrigger className="h-10 w-auto gap-1.5 rounded-full border-border px-3 text-xs" aria-label="Vencimiento">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {TASK_DUE_OPTIONS.map((d) => (
+              <SelectItem key={d} value={String(d)}>
+                {d} días antes
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <button
+          type="submit"
+          disabled={!newLabel.trim()}
+          className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-40"
+        >
+          <Plus size={12} /> Agregar
+        </button>
+      </form>
+    </section>
+  );
+}
+
+/* --------------------------- Exportar / importar --------------------------- */
+
+function ExportEventButton() {
+  const { items, details, wedding } = useEvent();
+  const handleExport = () => {
+    const payload = {
+      items: items.map((item) => ({
+        vendorId: item.vendor.id,
+        date: item.date?.toISOString(),
+        note: item.note,
+        status: item.status,
+      })),
+      details: {
+        name: details.name,
+        type: details.type,
+        date: details.date?.toISOString(),
+        guests: details.guests,
+        budget: details.budget,
+      },
+      wedding,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "mi-evento-momentum.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleExport}
+      className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+      title="Descarga tu evento como archivo JSON para respaldarlo o moverlo a otro dispositivo"
+    >
+      <Download size={12} /> Exportar
+    </button>
+  );
+}
+
+function ImportEventButton() {
+  const { importEvent } = useEvent();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [result, setResult] = useState<"ok" | "error" | null>(null);
+
+  const handleImport = () => {
+    const ok = importEvent(text);
+    setResult(ok ? "ok" : "error");
+    if (ok) {
+      setText("");
+      setTimeout(() => {
+        setOpen(false);
+        setResult(null);
+      }, 1200);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          title="Importa un evento exportado previamente"
+        >
+          <Upload size={12} /> Importar
+        </button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-2xl">Importar evento</DialogTitle>
+          <DialogDescription>
+            Pega el contenido del archivo JSON que exportaste. Se reemplazará tu evento actual.
+          </DialogDescription>
+        </DialogHeader>
+        <textarea
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setResult(null);
+          }}
+          rows={8}
+          placeholder='{"items": [...], "details": {...}}'
+          className="mt-2 w-full rounded-xl border border-border bg-transparent p-3 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 focus:border-foreground focus:outline-none"
+          aria-label="JSON del evento"
+        />
+        {result === "error" && (
+          <p className="text-xs font-medium text-destructive">Ese JSON no es válido. Verifica que sea el archivo exportado completo.</p>
+        )}
+        {result === "ok" && <p className="text-xs font-medium text-foreground">¡Listo! Tu evento se importó correctamente.</p>}
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={!text.trim()}
+            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-5 py-2.5 text-xs font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-40"
+          >
+            <Upload size={12} /> Importar evento
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* --------------------------------- Página ---------------------------------- */
 
 export function MiEventoClient() {
@@ -1105,6 +1801,23 @@ export function MiEventoClient() {
   const [editingName, setEditingName] = useState(false);
   const [lastRemoved, setLastRemoved] = useState<EventItem | null>(null);
   const [celebrate, setCelebrate] = useState(false);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+
+  const toggleCompare = (vendor: Vendor) => {
+    setCompareIds((prev) =>
+      prev.includes(vendor.id)
+        ? prev.filter((id) => id !== vendor.id)
+        : prev.length >= MAX_COMPARE
+          ? prev
+          : [...prev, vendor.id]
+    );
+  };
+
+  const compareVendors = useMemo(
+    () => compareIds.map((id) => VENDORS.find((v) => v.id === id)).filter((v): v is Vendor => v !== undefined),
+    [compareIds]
+  );
 
   const displayName = details.name.trim() || "Mi evento";
   const coveredCategories = new Set(items.map((i) => i.vendor.category));
@@ -1143,7 +1856,7 @@ export function MiEventoClient() {
   }, [hydrated, checklistComplete]);
 
   return (
-    <main className="min-h-screen bg-background pb-24">
+    <main className="editorial min-h-screen bg-background pb-24">
       <MiEventoHeader count={items.length} />
 
       {/* Hero */}
@@ -1221,25 +1934,39 @@ export function MiEventoClient() {
               <Reveal>
                 <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
                   <div id="servicios" className="scroll-mt-32">
-                    <ServicesSection items={items} onRemoveItem={handleRemoveItem} />
+                    <ServicesSection items={items} onRemoveItem={handleRemoveItem} compareIds={compareIds} onToggleCompare={toggleCompare} />
                   </div>
                   <div id="presupuesto" className="scroll-mt-32">
                     <BudgetPanel items={items} />
                   </div>
                 </div>
               </Reveal>
+              <Reveal>
+                <TasksSection />
+              </Reveal>
             </>
           )}
           <Reveal>
-            <RecommendationsSection items={items} />
+            <RecommendationsSection items={items} compareIds={compareIds} onToggleCompare={toggleCompare} />
           </Reveal>
+          {items.length > 0 && <div aria-hidden="true" className="h-16 md:hidden" />}
         </div>
       )}
 
       <Confetti show={celebrate} />
 
+      <CompareBar count={compareIds.length} lifted={lastRemoved !== null} onOpen={() => setCompareOpen(true)} />
+      <MobileCtaBar items={items} />
+      <CompareSheet
+        vendors={compareVendors}
+        items={items}
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        onRemove={(id) => setCompareIds((prev) => prev.filter((x) => x !== id))}
+      />
+
       {lastRemoved && (
-        <div className="animate-scale-in fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-foreground px-5 py-3 shadow-xl">
+        <div className="animate-scale-in fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-foreground px-5 py-3 shadow-xl md:bottom-6">
           <p className="text-sm text-background">
             Quitaste <strong className="font-semibold">{lastRemoved.vendor.name}</strong>
           </p>

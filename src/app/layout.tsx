@@ -1,12 +1,18 @@
 import React from "react"
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Cormorant_Garamond } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { EventProvider } from '@/lib/event-context'
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: '--font-cormorant',
+});
 
 export const metadata: Metadata = {
   title: 'Momentum | Todo para tu evento',
@@ -38,7 +44,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="bg-background">
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${cormorant.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           <EventProvider>{children}</EventProvider>
         </ThemeProvider>
