@@ -25,6 +25,7 @@ import {
   Pencil,
   PartyPopper,
   Plus,
+  RefreshCw,
   Send,
   Shirt,
   Sun,
@@ -301,18 +302,32 @@ function EditField({
   onChange,
   placeholder,
   textarea,
+  synced,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   textarea?: boolean;
+  /** Muestra el chip "Desde Mi Evento" cuando el campo se llenó automáticamente. */
+  synced?: boolean;
 }) {
   const inputClass =
     "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring";
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</span>
+      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        {label}
+        {synced && (
+          <span
+            title="Se llenó automáticamente desde Mi Evento. Al editarlo, tomas el control."
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-muted-foreground"
+          >
+            <span className="size-1.5 rounded-full bg-emerald-500" />
+            Desde Mi Evento
+          </span>
+        )}
+      </span>
       {textarea ? (
         <textarea
           rows={3}
@@ -337,8 +352,16 @@ function EditSheet({
   onOpenChange: (open: boolean) => void;
   target: string | null;
 }) {
-  const { wedding, updateWedding } = useEvent();
+  const { wedding, updateWedding, syncFields, resyncWedding, items } = useEvent();
   const set = (patch: Partial<WeddingSite>) => updateWedding(patch);
+
+  const venueKeys: Array<"ceremonyVenue" | "receptionVenue"> = ["ceremonyVenue", "receptionVenue"];
+  const syncedVenues = new Set<"ceremonyVenue" | "receptionVenue">(venueKeys.filter((k) => syncFields.includes(k)));
+  const syncedFaqAnswers = new Set(
+    items
+      .filter((i) => ["catering", "pasteleria", "autos-limosinas", "musica"].includes(i.vendor.category))
+      .map((i) => i.vendor.name)
+  );
 
   useEffect(() => {
     if (!open || !target) return;
@@ -382,6 +405,24 @@ function EditSheet({
             Cada cambio se refleja al instante en la página. Todo se guarda automáticamente.
           </SheetDescription>
         </SheetHeader>
+        {items.length > 0 && (
+          <div className="mx-4 flex flex-col gap-2.5 rounded-xl border border-emerald-600/20 bg-emerald-500/5 px-4 py-3">
+            <p className="flex items-start gap-2 text-xs leading-relaxed text-foreground/80">
+              <RefreshCw size={14} className="mt-0.5 shrink-0 text-emerald-600" />
+              <span>
+                Tu <strong className="font-semibold">Mi Evento</strong> alimenta esta página: fecha, invitados y los
+                servicios que elijas (sede, fotógrafo, catering…) se reflejan aquí solos.
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={resyncWedding}
+              className="inline-flex items-center justify-center gap-1.5 self-start rounded-full border border-emerald-600/30 bg-background px-3.5 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+            >
+              <RefreshCw size={12} /> Recargar desde Mi Evento
+            </button>
+          </div>
+        )}
         <div className="flex flex-col gap-5 px-4 pb-8">
           <div id="edit-portada" className="scroll-mt-4">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Foto de portada</p>
@@ -487,14 +528,14 @@ function EditSheet({
             Ceremonia
           </p>
           <div className="grid grid-cols-[1fr_110px] gap-3">
-            <EditField label="Sede" value={wedding.ceremonyVenue} onChange={(v) => set({ ceremonyVenue: v })} placeholder="Parroquia de San Miguel" />
+            <EditField label="Sede" value={wedding.ceremonyVenue} onChange={(v) => set({ ceremonyVenue: v })} placeholder="Parroquia de San Miguel" synced={syncedVenues.has("ceremonyVenue")} />
             <EditField label="Hora" value={wedding.ceremonyTime} onChange={(v) => set({ ceremonyTime: v })} placeholder="5:00 PM" />
           </div>
           <p id="edit-recepcion" className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground scroll-mt-4">
             Recepción
           </p>
           <div className="grid grid-cols-[1fr_110px] gap-3">
-            <EditField label="Sede" value={wedding.receptionVenue} onChange={(v) => set({ receptionVenue: v })} placeholder="Hacienda Los Laureles" />
+            <EditField label="Sede" value={wedding.receptionVenue} onChange={(v) => set({ receptionVenue: v })} placeholder="Hacienda Los Laureles" synced={syncedVenues.has("receptionVenue")} />
             <EditField label="Hora" value={wedding.receptionTime} onChange={(v) => set({ receptionTime: v })} placeholder="7:30 PM" />
           </div>
           <div id="edit-extras" className="flex flex-col gap-5 scroll-mt-4">
@@ -578,7 +619,17 @@ function EditSheet({
             )}
           </div>
           <div id="edit-galeria" className="flex flex-col gap-3 scroll-mt-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Galería de fotos</p>
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-foreground">
+              Galería de fotos
+              {syncFields.includes("gallery") && (
+                <span
+                  title="Se llenó con las fotos del fotógrafo elegido en Mi Evento. Al editarla, tomas el control."
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-muted-foreground"
+                >
+                  <span className="size-1.5 rounded-full bg-emerald-500" /> Desde Mi Evento
+                </span>
+              )}
+            </p>
             {wedding.gallery.map((url, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-secondary">
@@ -638,6 +689,7 @@ function EditSheet({
                   onChange={(v) => setFaq(i, { a: v })}
                   placeholder="Escribe la respuesta…"
                   textarea
+                  synced={syncedFaqAnswers.has(faq.a)}
                 />
               </div>
             ))}

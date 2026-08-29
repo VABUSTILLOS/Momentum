@@ -2,6 +2,12 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { VENDORS, type Vendor } from "@/lib/marketplace-data";
+import {
+  applyEventToWedding,
+  computeSyncFields,
+  DEFAULT_WEDDING_GALLERY,
+  type SyncField,
+} from "@/lib/wedding-sync";
 
 export type ItemStatus = "pendiente" | "apartado" | "confirmado";
 
@@ -155,6 +161,10 @@ interface EventContextValue {
   details: EventDetails;
   wedding: WeddingSite;
   hydrated: boolean;
+  /** Campos del sitio de boda alimentados automáticamente desde Mi Evento. */
+  syncFields: SyncField[];
+  /** Re-aplica el sync de Mi Evento → boda de forma manual (rellena solo vacíos). */
+  resyncWedding: () => void;
   addItem: (vendor: Vendor, date?: Date) => void;
   removeItem: (vendorId: string) => void;
   updateItemDate: (vendorId: string, date?: Date) => void;
@@ -193,13 +203,6 @@ const DEFAULT_DETAILS: EventDetails = {
 
 export const DEFAULT_WEDDING_HERO =
   "https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1920";
-
-export const DEFAULT_WEDDING_GALLERY: string[] = [
-  "https://images.pexels.com/photos/2959192/pexels-photo-2959192.jpeg?auto=compress&cs=tinysrgb&w=800",
-  "https://images.pexels.com/photos/1721558/pexels-photo-1721558.jpeg?auto=compress&cs=tinysrgb&w=800",
-  "https://images.pexels.com/photos/931177/pexels-photo-931177.jpeg?auto=compress&cs=tinysrgb&w=800",
-  "https://images.pexels.com/photos/1244627/pexels-photo-1244627.jpeg?auto=compress&cs=tinysrgb&w=800",
-];
 
 export const DEFAULT_WEDDING: WeddingSite = {
   partner1: "",
@@ -418,6 +421,26 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     setWedding((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  // Auto-sync Mi Evento → boda: cuando el tipo es boda y los items cambian,
+  // rellena los campos vacíos/predeterminados del sitio de boda (idempotente).
+  useEffect(() => {
+    if (!hydrated || details.type !== "boda") return;
+    const result = applyEventToWedding(wedding, items);
+    if (result.changed) setWedding(result.wedding);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, details.type, items]);
+
+  const resyncWedding = useCallback(() => {
+    if (details.type !== "boda") return;
+    const result = applyEventToWedding(wedding, items);
+    if (result.changed) setWedding(result.wedding);
+  }, [details.type, wedding, items]);
+
+  const syncFields = useMemo<SyncField[]>(() => {
+    if (details.type !== "boda") return [];
+    return computeSyncFields(wedding, items);
+  }, [details.type, wedding, items]);
+
   const addRsvp = useCallback((entry: Omit<RsvpEntry, "at">) => {
     setRsvps((prev) => [...prev, { ...entry, at: new Date().toISOString() }]);
   }, []);
@@ -498,8 +521,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<EventContextValue>(
-    () => ({ items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateItemNote, updateItemStatus, updateDetails, updateWedding, rsvps, addRsvp, clearRsvps, wishes, addWish, clearWishes, tasks, toggleTask, addTask, removeTask, importEvent, clearEvent }),
-    [items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateItemNote, updateItemStatus, updateDetails, updateWedding, rsvps, addRsvp, clearRsvps, wishes, addWish, clearWishes, tasks, toggleTask, addTask, removeTask, importEvent, clearEvent]
+    () => ({ items, details, wedding, hydrated, syncFields, resyncWedding, addItem, removeItem, updateItemDate, updateItemNote, updateItemStatus, updateDetails, updateWedding, rsvps, addRsvp, clearRsvps, wishes, addWish, clearWishes, tasks, toggleTask, addTask, removeTask, importEvent, clearEvent }),
+    [items, details, wedding, hydrated, syncFields, resyncWedding, addItem, removeItem, updateItemDate, updateItemNote, updateItemStatus, updateDetails, updateWedding, rsvps, addRsvp, clearRsvps, wishes, addWish, clearWishes, tasks, toggleTask, addTask, removeTask, importEvent, clearEvent]
   );
 
   return <EventContext.Provider value={value}>{children}</EventContext.Provider>;

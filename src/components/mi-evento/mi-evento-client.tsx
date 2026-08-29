@@ -560,7 +560,7 @@ function DetailsSection() {
 /* ------------------------------ CTA de boda -------------------------------- */
 
 function WeddingCTA() {
-  const { wedding, details } = useEvent();
+  const { wedding, details, items } = useEvent();
   const [copied, setCopied] = useState(false);
 
   const copyGuestLink = async () => {
@@ -573,6 +573,21 @@ function WeddingCTA() {
       // clipboard unavailable
     }
   };
+
+  // Mapeo en vivo de Mi Evento → boda (mismo criterio que el sync)
+  const venues = items.filter((i) => i.vendor.category === "venues");
+  const venue = venues[0];
+  const fotografo = items.find((i) => i.vendor.category === "fotografia");
+  const hasCatering = items.some((i) => i.vendor.category === "catering");
+  const hasPastel = items.some((i) => i.vendor.category === "pasteleria");
+  const hasTransporte = items.some((i) => i.vendor.category === "autos-limosinas");
+  const hasMusica = items.some((i) => i.vendor.category === "musica");
+  const previewChips = [
+    { label: "Banquete", ok: hasCatering },
+    { label: "Pastel", ok: hasPastel },
+    { label: "Transporte", ok: hasTransporte },
+    { label: "Música", ok: hasMusica },
+  ];
 
   return (
     <section {...fade(250)}>
@@ -598,6 +613,69 @@ function WeddingCTA() {
           Empezar ahora <ArrowRight size={15} />
         </span>
       </Link>
+
+      {/* Preview en vivo de lo que alimenta a la boda */}
+      <div className="card-lift mt-4 rounded-2xl border border-border bg-background p-5 text-foreground">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Así se verá tu boda
+          </p>
+          <p className="text-[11px] text-muted-foreground">Según lo que elegiste en Mi Evento</p>
+        </div>
+        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
+              <Landmark size={16} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Sede</p>
+              <p className="truncate text-sm font-semibold">
+                {venue?.vendor.name ?? <span className="font-normal text-muted-foreground">No has elegido sede aún</span>}
+              </p>
+            </div>
+          </div>
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
+              <Camera size={16} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Galería</p>
+              <p className="truncate text-sm font-semibold">
+                {fotografo?.vendor.name ?? (
+                  <span className="font-normal text-muted-foreground">Elige un fotógrafo para las fotos</span>
+                )}
+              </p>
+              {fotografo && (
+                <div className="mt-1.5 flex gap-1.5">
+                  {fotografo.vendor.images.slice(0, 4).map((u, i) => (
+                    <span key={i} className="size-8 overflow-hidden rounded-md border border-border">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={u} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {previewChips.map((chip) => (
+            <span
+              key={chip.label}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                chip.ok
+                  ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-700"
+                  : "border-border bg-secondary/60 text-muted-foreground"
+              )}
+            >
+              {chip.ok ? <Check size={11} className="text-emerald-600" /> : <CircleDashed size={11} />}
+              {chip.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
           El enlace incluye todos los datos de tu página; tus invitados la verán en modo lectura.
