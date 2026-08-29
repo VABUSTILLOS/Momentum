@@ -5,12 +5,15 @@ import Link from "next/link";
 import {
   ArrowLeft,
   CalendarDays,
+  CalendarPlus,
   Check,
+  Copy,
   Gift,
   Heart,
   MapPin,
   Moon,
   Pencil,
+  PartyPopper,
   Shirt,
   Sun,
   Users,
@@ -23,13 +26,25 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { useEvent, type WeddingSite } from "@/lib/event-context";
 import { cn } from "@/lib/utils";
 
 const HERO_IMAGE =
   "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1920";
+
+const GALLERY_IMAGES = [
+  "https://images.pexels.com/photos/169190/pexels-photo-169190.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=800",
+];
+
+const DEFAULT_STORY = [
+  { title: "Cómo nos conocimos", text: "Todo empezó con una mirada y un café que duró horas." },
+  { title: "La propuesta", text: "Entre nervios y lágrimas de felicidad, dijimos que sí al para siempre." },
+  { title: "El gran día", text: "Y ahora los queremos a ustedes celebrando con nosotros." },
+];
 
 const fade = (delay: number, className?: string) => ({
   className: cn("animate-fade-in opacity-0", className),
@@ -42,9 +57,29 @@ function coupleNames(wedding: WeddingSite) {
   return { p1, p2, label: `${p1} & ${p2}` };
 }
 
+function mapsUrl(venue: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venue)}`;
+}
+
+/* --------------------------- Botón editar sección --------------------------- */
+
+function EditCornerButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="absolute right-4 top-4 z-20 inline-flex size-9 items-center justify-center rounded-full border border-border bg-background/90 text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:text-foreground"
+    >
+      <Pencil size={14} />
+    </button>
+  );
+}
+
 /* --------------------------------- Toolbar --------------------------------- */
 
-function BodaToolbar() {
+function BodaToolbar({ onEdit }: { onEdit: () => void }) {
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
 
@@ -74,7 +109,14 @@ function BodaToolbar() {
           >
             {mounted && resolvedTheme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
           </button>
-          <EditSheet />
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex items-center gap-2 rounded-full bg-background px-5 py-2 text-sm font-medium text-foreground hover:bg-background/90"
+          >
+            <Pencil size={14} />
+            <span className="hidden sm:inline">Editar contenido</span>
+          </button>
         </div>
       </div>
     </header>
@@ -116,21 +158,33 @@ function EditField({
   );
 }
 
-function EditSheet() {
+function EditSheet({
+  open,
+  onOpenChange,
+  target,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  target: string | null;
+}) {
   const { wedding, updateWedding } = useEvent();
   const set = (patch: Partial<WeddingSite>) => updateWedding(patch);
 
+  useEffect(() => {
+    if (!open || !target) return;
+    const t = setTimeout(() => {
+      document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [open, target]);
+
+  const setMoment = (index: number, patch: Partial<{ title: string; text: string }>) => {
+    const story = wedding.story.map((m, i) => (i === index ? { ...m, ...patch } : m));
+    set({ story });
+  };
+
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 rounded-full bg-background px-5 py-2 text-sm font-medium text-foreground hover:bg-background/90"
-        >
-          <Pencil size={14} />
-          <span className="hidden sm:inline">Editar contenido</span>
-        </button>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="font-serif text-2xl tracking-tight">Personaliza tu página</SheetTitle>
@@ -139,30 +193,58 @@ function EditSheet() {
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-5 px-4 pb-8">
-          <div className="grid grid-cols-2 gap-3">
+          <div id="edit-pareja" className="grid grid-cols-2 gap-3 scroll-mt-4">
             <EditField label="Nombre 1" value={wedding.partner1} onChange={(v) => set({ partner1: v })} placeholder="Mariana" />
             <EditField label="Nombre 2" value={wedding.partner2} onChange={(v) => set({ partner2: v })} placeholder="Diego" />
           </div>
           <EditField label="Hashtag" value={wedding.hashtag} onChange={(v) => set({ hashtag: v })} placeholder="#MarianaYDiego" />
-          <EditField
-            label="Mensaje de bienvenida"
-            value={wedding.message}
-            onChange={(v) => set({ message: v })}
-            placeholder="Después de tanto tiempo juntos, por fin llegó el día…"
-            textarea
-          />
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Ceremonia</p>
+          <div id="edit-mensaje" className="scroll-mt-4">
+            <EditField
+              label="Mensaje de bienvenida"
+              value={wedding.message}
+              onChange={(v) => set({ message: v })}
+              placeholder="Después de tanto tiempo juntos, por fin llegó el día…"
+              textarea
+            />
+          </div>
+          <div id="edit-historia" className="flex flex-col gap-3 scroll-mt-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Nuestra historia</p>
+            {wedding.story.map((moment, i) => (
+              <div key={i} className="flex flex-col gap-3 rounded-xl border border-border p-3">
+                <EditField
+                  label={`Momento ${i + 1} · título`}
+                  value={moment.title}
+                  onChange={(v) => setMoment(i, { title: v })}
+                  placeholder={DEFAULT_STORY[i]?.title}
+                />
+                <EditField
+                  label={`Momento ${i + 1} · texto`}
+                  value={moment.text}
+                  onChange={(v) => setMoment(i, { text: v })}
+                  placeholder={DEFAULT_STORY[i]?.text}
+                  textarea
+                />
+              </div>
+            ))}
+          </div>
+          <p id="edit-ceremonia" className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground scroll-mt-4">
+            Ceremonia
+          </p>
           <div className="grid grid-cols-[1fr_110px] gap-3">
             <EditField label="Sede" value={wedding.ceremonyVenue} onChange={(v) => set({ ceremonyVenue: v })} placeholder="Parroquia de San Miguel" />
             <EditField label="Hora" value={wedding.ceremonyTime} onChange={(v) => set({ ceremonyTime: v })} placeholder="5:00 PM" />
           </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Recepción</p>
+          <p id="edit-recepcion" className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground scroll-mt-4">
+            Recepción
+          </p>
           <div className="grid grid-cols-[1fr_110px] gap-3">
             <EditField label="Sede" value={wedding.receptionVenue} onChange={(v) => set({ receptionVenue: v })} placeholder="Hacienda Los Laureles" />
             <EditField label="Hora" value={wedding.receptionTime} onChange={(v) => set({ receptionTime: v })} placeholder="7:30 PM" />
           </div>
-          <EditField label="Código de vestimenta" value={wedding.dressCode} onChange={(v) => set({ dressCode: v })} placeholder="Etiqueta rigurosa" />
-          <EditField label="Mesa de regalos" value={wedding.giftTable} onChange={(v) => set({ giftTable: v })} placeholder="Liverpool · Evento 51234567" />
+          <div id="edit-extras" className="flex flex-col gap-5 scroll-mt-4">
+            <EditField label="Código de vestimenta" value={wedding.dressCode} onChange={(v) => set({ dressCode: v })} placeholder="Etiqueta rigurosa" />
+            <EditField label="Mesa de regalos" value={wedding.giftTable} onChange={(v) => set({ giftTable: v })} placeholder="Liverpool · Evento 51234567" />
+          </div>
         </div>
       </SheetContent>
     </Sheet>
@@ -183,6 +265,7 @@ function useCountdown(target?: Date) {
   if (!target || now === null) return null;
   const diff = Math.max(0, target.getTime() - now);
   return {
+    done: target.getTime() <= now,
     dias: Math.floor(diff / 86400000),
     horas: Math.floor(diff / 3600000) % 24,
     minutos: Math.floor(diff / 60000) % 60,
@@ -205,6 +288,13 @@ function Countdown({ date }: { date?: Date }) {
   if (!t) {
     return <div className="mt-8 h-20" aria-hidden="true" />;
   }
+  if (t.done) {
+    return (
+      <p className="animate-scale-in mt-8 inline-flex items-center gap-2 rounded-full bg-background px-6 py-3 font-serif text-xl italic text-foreground">
+        <PartyPopper size={18} /> ¡Hoy es el día!
+      </p>
+    );
+  }
   const cells = [
     { v: t.dias, l: "días" },
     { v: t.horas, l: "horas" },
@@ -226,16 +316,107 @@ function Countdown({ date }: { date?: Date }) {
   );
 }
 
+/* --------------------------- Acciones para invitados ------------------------- */
+
+function downloadIcs(date: Date, names: string, wedding: WeddingSite) {
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}T${String(
+      d.getHours()
+    ).padStart(2, "0")}${String(d.getMinutes()).padStart(2, "0")}00`;
+  const start = new Date(date);
+  start.setHours(17, 0, 0, 0);
+  const end = new Date(date);
+  end.setHours(23, 59, 0, 0);
+  const location = [wedding.ceremonyVenue, wedding.receptionVenue].filter((v) => v.trim()).join(" y ");
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Momentum//Mi Boda//ES",
+    "BEGIN:VEVENT",
+    `UID:${Date.now()}@momentum`,
+    `DTSTAMP:${fmt(new Date())}`,
+    `DTSTART:${fmt(start)}`,
+    `DTEND:${fmt(end)}`,
+    `SUMMARY:Boda de ${names}`,
+    location ? `LOCATION:${location}` : "",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ]
+    .filter(Boolean)
+    .join("\r\n");
+  const blob = new Blob([ics], { type: "text/calendar" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "nuestra-boda.ics";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function GuestActions({ wedding }: { wedding: WeddingSite }) {
+  const { details } = useEvent();
+  const [copied, setCopied] = useState(false);
+  const names = coupleNames(wedding);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch {
+      /* portapapeles no disponible */
+    }
+  };
+
+  return (
+    <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+      {details.date && (
+        <button
+          type="button"
+          onClick={() => downloadIcs(details.date as Date, names.label, wedding)}
+          className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-2.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10"
+        >
+          <CalendarPlus size={14} /> Agregar al calendario
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={copyLink}
+        className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-2.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10"
+      >
+        {copied ? <Check size={14} /> : <Copy size={14} />}
+        {copied ? "¡Enlace copiado!" : "Copiar enlace"}
+      </button>
+    </div>
+  );
+}
+
 /* -------------------------------- Secciones -------------------------------- */
 
-function HeroSection({ wedding }: { wedding: WeddingSite }) {
+function Ornament({ light }: { light?: boolean }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={cn("flex items-center justify-center gap-3", light ? "text-white/70" : "text-muted-foreground/50")}
+    >
+      <span className="h-px w-16 bg-current" />
+      <Heart size={13} className="fill-current" />
+      <span className="h-px w-16 bg-current" />
+    </div>
+  );
+}
+
+function HeroSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => void }) {
   const { details } = useEvent();
   const names = coupleNames(wedding);
 
   return (
-    <section className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 text-center text-white">
-      <FadeImage src={HERO_IMAGE} alt="Boda" fill priority className="object-cover" />
+    <section id="inicio" className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 text-center text-white">
+      <div className="animate-scale-in absolute inset-0">
+        <FadeImage src={HERO_IMAGE} alt="Boda" fill priority className="object-cover" />
+      </div>
       <div className="absolute inset-0 bg-black/45" />
+      <EditCornerButton label="Editar nombres" onClick={onEdit} />
       <div className="relative z-10 flex flex-col items-center">
         <p {...fade(0, "text-xs uppercase tracking-[0.32em] opacity-90")}>Nos casamos</p>
         <h1 {...fade(150, "mt-6 font-serif text-6xl font-medium leading-[0.95] tracking-tight md:text-8xl")}>
@@ -243,6 +424,9 @@ function HeroSection({ wedding }: { wedding: WeddingSite }) {
           <span className="mx-3 font-light italic md:mx-5">&</span>
           {names.p2}
         </h1>
+        <div {...fade(250, "mt-8")}>
+          <Ornament light />
+        </div>
         <p {...fade(300, "mt-6 flex items-center gap-2 text-sm uppercase tracking-[0.24em] opacity-90")}>
           <CalendarDays size={15} />
           {details.date
@@ -251,6 +435,9 @@ function HeroSection({ wedding }: { wedding: WeddingSite }) {
         </p>
         <div {...fade(450)}>
           <Countdown date={details.date} />
+        </div>
+        <div {...fade(600)}>
+          <GuestActions wedding={wedding} />
         </div>
       </div>
       <div className="absolute bottom-8 z-10 flex flex-col items-center gap-2 opacity-80">
@@ -261,12 +448,13 @@ function HeroSection({ wedding }: { wedding: WeddingSite }) {
   );
 }
 
-function WelcomeSection({ wedding }: { wedding: WeddingSite }) {
+function WelcomeSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => void }) {
   const message =
     wedding.message.trim() ||
     "Después de tanto tiempo juntos, por fin llegó el día que soñamos. Queremos celebrarlo rodeados de las personas que más queremos: ustedes. Acompáñanos a escribir el capítulo más bonito de nuestra historia.";
   return (
-    <section className="mx-auto max-w-2xl px-6 py-20 text-center md:py-28">
+    <section className="relative mx-auto max-w-2xl px-6 py-20 text-center md:py-28">
+      <EditCornerButton label="Editar mensaje" onClick={onEdit} />
       <span {...fade(0, "inline-flex size-12 items-center justify-center rounded-full bg-secondary text-foreground")}>
         <Heart size={20} className="fill-foreground" />
       </span>
@@ -277,6 +465,58 @@ function WelcomeSection({ wedding }: { wedding: WeddingSite }) {
       {wedding.hashtag.trim() && (
         <p {...fade(300, "mt-6 font-serif text-xl italic text-foreground")}>{wedding.hashtag}</p>
       )}
+    </section>
+  );
+}
+
+function GallerySection() {
+  return (
+    <section className="mx-auto max-w-5xl px-6 pb-20">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {GALLERY_IMAGES.map((src, i) => (
+          <div
+            key={src}
+            {...fade(i * 100, "group relative aspect-[3/4] overflow-hidden rounded-2xl bg-secondary")}
+          >
+            <FadeImage
+              src={src}
+              alt={`Momento ${i + 1}`}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StorySection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => void }) {
+  const moments = wedding.story.map((m, i) => ({
+    title: m.title.trim() || DEFAULT_STORY[i]?.title || "",
+    text: m.text.trim() || DEFAULT_STORY[i]?.text || "",
+  }));
+
+  return (
+    <section id="historia" className="relative mx-auto max-w-2xl scroll-mt-24 px-6 pb-20 md:pb-28">
+      <EditCornerButton label="Editar historia" onClick={onEdit} />
+      <h2 {...fade(0, "text-center font-serif text-3xl font-medium tracking-tight text-foreground md:text-4xl")}>
+        Nuestra historia
+      </h2>
+      <div {...fade(100, "mt-6")}>
+        <Ornament />
+      </div>
+      <ol className="relative mt-12 flex flex-col gap-10 border-l-2 border-border pl-8">
+        {moments.map((m, i) => (
+          <li key={i} {...fade(150 + i * 120, "relative")}>
+            <span className="absolute -left-[41px] top-1 inline-flex size-5 items-center justify-center rounded-full bg-foreground">
+              <Heart size={10} className="fill-background text-background" />
+            </span>
+            <p className="font-serif text-xl font-medium tracking-tight text-foreground">{m.title}</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{m.text}</p>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
@@ -292,6 +532,7 @@ function VenueCard({
   time: string;
   delay: number;
 }) {
+  const hasVenue = venue.trim().length > 0;
   return (
     <div {...fade(delay, "flex flex-col items-center rounded-3xl border border-border p-8 text-center md:p-10")}>
       <span className="inline-flex size-12 items-center justify-center rounded-full bg-secondary text-foreground">
@@ -300,17 +541,33 @@ function VenueCard({
       <h3 className="mt-5 font-serif text-2xl font-medium tracking-tight text-foreground">{title}</h3>
       <p className="mt-3 text-base font-medium text-foreground">{venue || "Sede por confirmar"}</p>
       <p className="mt-1 text-sm text-muted-foreground">{time || "Hora por confirmar"}</p>
+      {hasVenue && (
+        <a
+          href={mapsUrl(venue)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+        >
+          <MapPin size={12} /> Ver mapa
+        </a>
+      )}
     </div>
   );
 }
 
-function DetailsGrid({ wedding }: { wedding: WeddingSite }) {
+function DetailsGrid({ wedding, onEditCeremony, onEditReception }: { wedding: WeddingSite; onEditCeremony: () => void; onEditReception: () => void }) {
   const { details } = useEvent();
   return (
-    <section className="mx-auto max-w-4xl px-6 pb-20 md:pb-28">
-      <div className="grid gap-6 md:grid-cols-2">
-        <VenueCard title="Ceremonia" venue={wedding.ceremonyVenue} time={wedding.ceremonyTime} delay={0} />
-        <VenueCard title="Recepción" venue={wedding.receptionVenue} time={wedding.receptionTime} delay={100} />
+    <section id="detalles" className="mx-auto max-w-4xl scroll-mt-24 px-6 pb-20 md:pb-28">
+      <div className="relative grid gap-6 md:grid-cols-2">
+        <div className="relative">
+          <EditCornerButton label="Editar ceremonia" onClick={onEditCeremony} />
+          <VenueCard title="Ceremonia" venue={wedding.ceremonyVenue} time={wedding.ceremonyTime} delay={0} />
+        </div>
+        <div className="relative">
+          <EditCornerButton label="Editar recepción" onClick={onEditReception} />
+          <VenueCard title="Recepción" venue={wedding.receptionVenue} time={wedding.receptionTime} delay={100} />
+        </div>
       </div>
       <div {...fade(200, "mt-6 grid gap-6 md:grid-cols-2")}>
         <div className="flex flex-col items-center rounded-3xl border border-border p-8 text-center">
@@ -334,9 +591,10 @@ function DetailsGrid({ wedding }: { wedding: WeddingSite }) {
   );
 }
 
-function GiftSection({ wedding }: { wedding: WeddingSite }) {
+function GiftSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => void }) {
   return (
-    <section className="bg-secondary/60 px-6 py-20 md:py-28">
+    <section id="regalos" className="relative scroll-mt-24 bg-secondary/60 px-6 py-20 md:py-28">
+      <EditCornerButton label="Editar mesa de regalos" onClick={onEdit} />
       <div className="mx-auto max-w-2xl text-center">
         <span {...fade(0, "inline-flex size-12 items-center justify-center rounded-full bg-foreground text-background")}>
           <Gift size={20} />
@@ -364,8 +622,8 @@ function RsvpSection({ wedding }: { wedding: WeddingSite }) {
 
   if (sent) {
     return (
-      <section className="px-6 py-20 md:py-28">
-        <div className="mx-auto flex max-w-md flex-col items-center rounded-3xl border border-border px-8 py-14 text-center">
+      <section id="rsvp" className="scroll-mt-24 px-6 py-20 md:py-28">
+        <div className="animate-scale-in mx-auto flex max-w-md flex-col items-center rounded-3xl border border-border px-8 py-14 text-center">
           <span className="inline-flex size-14 items-center justify-center rounded-full bg-foreground text-background">
             <Check size={24} />
           </span>
@@ -381,7 +639,7 @@ function RsvpSection({ wedding }: { wedding: WeddingSite }) {
   }
 
   return (
-    <section className="px-6 py-20 md:py-28">
+    <section id="rsvp" className="scroll-mt-24 px-6 py-20 md:py-28">
       <div className="mx-auto max-w-md">
         <h2 {...fade(0, "text-center font-serif text-3xl font-medium tracking-tight text-foreground md:text-4xl")}>
           Confirma tu asistencia
@@ -445,11 +703,52 @@ function RsvpSection({ wedding }: { wedding: WeddingSite }) {
   );
 }
 
+/* --------------------------- Navegación de puntos ---------------------------- */
+
+function DotNav() {
+  const links = [
+    { id: "inicio", label: "Inicio" },
+    { id: "historia", label: "Historia" },
+    { id: "detalles", label: "Detalles" },
+    { id: "regalos", label: "Regalos" },
+    { id: "rsvp", label: "RSVP" },
+  ];
+  return (
+    <nav
+      aria-label="Secciones de la página"
+      className="fixed right-6 top-1/2 z-40 hidden -translate-y-1/2 flex-col gap-3 lg:flex"
+    >
+      {links.map((l) => (
+        <button
+          key={l.id}
+          type="button"
+          title={l.label}
+          aria-label={`Ir a ${l.label}`}
+          onClick={() => document.getElementById(l.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className="group flex items-center justify-end gap-2"
+        >
+          <span className="rounded-full bg-foreground/80 px-2.5 py-1 text-[10px] font-medium text-background opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+            {l.label}
+          </span>
+          <span className="size-2.5 rounded-full bg-foreground/40 transition-colors group-hover:bg-foreground" />
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 /* --------------------------------- Página ---------------------------------- */
 
 export function BodaClient() {
   const { wedding, hydrated } = useEvent();
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<string | null>(null);
   const names = coupleNames(wedding);
+
+  const openEdit = (target: string) => {
+    setEditTarget(target);
+    setEditOpen(true);
+  };
 
   if (!hydrated) {
     return (
@@ -461,11 +760,19 @@ export function BodaClient() {
 
   return (
     <main className="min-h-screen bg-background">
-      <BodaToolbar />
-      <HeroSection wedding={wedding} />
-      <WelcomeSection wedding={wedding} />
-      <DetailsGrid wedding={wedding} />
-      <GiftSection wedding={wedding} />
+      <BodaToolbar onEdit={() => openEdit("edit-pareja")} />
+      <DotNav />
+      <EditSheet open={editOpen} onOpenChange={setEditOpen} target={editTarget} />
+      <HeroSection wedding={wedding} onEdit={() => openEdit("edit-pareja")} />
+      <WelcomeSection wedding={wedding} onEdit={() => openEdit("edit-mensaje")} />
+      <GallerySection />
+      <StorySection wedding={wedding} onEdit={() => openEdit("edit-historia")} />
+      <DetailsGrid
+        wedding={wedding}
+        onEditCeremony={() => openEdit("edit-ceremonia")}
+        onEditReception={() => openEdit("edit-recepcion")}
+      />
+      <GiftSection wedding={wedding} onEdit={() => openEdit("edit-extras")} />
       <RsvpSection wedding={wedding} />
       <footer className="border-t border-border px-6 py-10 text-center">
         <p className="font-serif text-lg italic text-foreground">{names.label}</p>

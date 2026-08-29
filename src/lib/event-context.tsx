@@ -18,6 +18,11 @@ export interface EventDetails {
   budget: number;
 }
 
+export interface StoryMoment {
+  title: string;
+  text: string;
+}
+
 export interface WeddingSite {
   partner1: string;
   partner2: string;
@@ -29,6 +34,7 @@ export interface WeddingSite {
   receptionTime: string;
   dressCode: string;
   giftTable: string;
+  story: StoryMoment[];
 }
 
 interface StoredItem {
@@ -84,6 +90,11 @@ export const DEFAULT_WEDDING: WeddingSite = {
   receptionTime: "",
   dressCode: "",
   giftTable: "",
+  story: [
+    { title: "", text: "" },
+    { title: "", text: "" },
+    { title: "", text: "" },
+  ],
 };
 
 function loadStoredState(): StoredState | null {

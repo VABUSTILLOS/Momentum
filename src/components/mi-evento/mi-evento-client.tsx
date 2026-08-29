@@ -5,18 +5,30 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  CakeSlice,
   CalendarDays,
+  Camera,
+  Candy,
+  Car,
   Check,
+  Gem,
   Heart,
+  Landmark,
   Moon,
+  Music,
+  Palette,
+  PartyPopper,
   Pencil,
   Plus,
+  Shirt,
   Sparkles,
   Star,
   Sun,
   Trash2,
   Users,
+  UtensilsCrossed,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { FadeImage } from "@/components/fade-image";
@@ -24,7 +36,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { useEvent, type EventItem, type EventType } from "@/lib/event-context";
-import { CATEGORIES, formatMXN, type Vendor } from "@/lib/marketplace-data";
+import { CATEGORIES, formatMXN, type Vendor, type VendorCategory } from "@/lib/marketplace-data";
 import { recommendVendors, type Recommendation } from "@/lib/recommendations";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +47,21 @@ const fade = (delay: number, className?: string) => ({
   className: cn("animate-fade-in opacity-0", className),
   style: { animationDelay: `${delay}ms`, animationFillMode: "forwards" as const },
 });
+
+const CATEGORY_ICONS: Record<VendorCategory, LucideIcon> = {
+  musica: Music,
+  catering: UtensilsCrossed,
+  fotografia: Camera,
+  venues: Landmark,
+  decoracion: Palette,
+  "mesa-de-dulces": Candy,
+  pasteleria: CakeSlice,
+  "vestidos-novia": Gem,
+  "trajes-tuxedos": Shirt,
+  "autos-limosinas": Car,
+};
+
+const categoryIcon = (slug: VendorCategory) => CATEGORY_ICONS[slug] ?? Sparkles;
 
 /* ---------------------------------- Header --------------------------------- */
 
@@ -95,6 +122,95 @@ function MiEventoHeader({ count }: { count: number }) {
         </div>
       </div>
     </header>
+  );
+}
+
+/* --------------------------- Resumen en vivo ------------------------------- */
+
+function SummaryBar({ items }: { items: EventItem[] }) {
+  const { details } = useEvent();
+  const total = items.reduce((s, i) => s + i.vendor.basePrice, 0);
+  const pct = Math.min(100, Math.round((total / details.budget) * 100));
+
+  const pills = [
+    {
+      icon: CalendarDays,
+      label: details.date
+        ? details.date.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })
+        : "Sin fecha",
+    },
+    { icon: Users, label: `${details.guests} invitados` },
+    { icon: Sparkles, label: `${items.length} ${items.length === 1 ? "servicio" : "servicios"}` },
+    { icon: Wallet, label: `${pct}% del presupuesto` },
+  ];
+
+  return (
+    <div {...fade(300, "mt-8 flex flex-wrap gap-2")}>
+      {pills.map((p) => (
+        <span
+          key={p.label}
+          className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-4 py-2 text-xs font-medium text-foreground backdrop-blur-sm"
+        >
+          <p.icon size={13} className="text-muted-foreground" />
+          {p.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------ Guía 3 pasos ------------------------------- */
+
+function StepsGuide({ done }: { done: boolean }) {
+  if (done) return null;
+  const steps = [
+    { n: "1", title: "Elige fecha y tipo", desc: "Cuéntanos qué celebras y cuándo." },
+    { n: "2", title: "Agrega servicios", desc: "Arma tu equipo pieza por pieza." },
+    { n: "3", title: "Aparta con el 10%", desc: "Asegura todo sin pagarlo completo." },
+  ];
+  return (
+    <div {...fade(400, "mt-10 grid gap-3 sm:grid-cols-3")}>
+      {steps.map((s, i) => (
+        <div key={s.n} className="flex items-start gap-3 rounded-2xl border border-border/70 bg-background/60 p-4 backdrop-blur-sm">
+          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-sm font-semibold text-background">
+            {s.n}
+          </span>
+          <div>
+            <p className="text-sm font-medium text-foreground">{s.title}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{s.desc}</p>
+          </div>
+          {i < steps.length - 1 && <ArrowRight size={14} className="ml-auto mt-2 hidden shrink-0 text-muted-foreground sm:block" />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* --------------------------- Navegación secciones -------------------------- */
+
+function SectionNav({ show }: { show: boolean }) {
+  if (!show) return null;
+  const links = [
+    { id: "detalles", label: "Detalles" },
+    { id: "servicios", label: "Servicios" },
+    { id: "presupuesto", label: "Presupuesto" },
+  ];
+  return (
+    <nav
+      {...fade(200, "sticky top-24 z-40 mx-auto flex w-fit gap-1 rounded-full border border-border bg-background/85 p-1.5 shadow-lg backdrop-blur-md")}
+      aria-label="Secciones de tu evento"
+    >
+      {links.map((l) => (
+        <button
+          key={l.id}
+          type="button"
+          onClick={() => document.getElementById(l.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className="rounded-full px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          {l.label}
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -255,6 +371,7 @@ function WeddingCTA() {
 function ChecklistSection({ items }: { items: EventItem[] }) {
   const covered = useMemo(() => new Set(items.map((i) => i.vendor.category)), [items]);
   const pct = Math.round((covered.size / CATEGORIES.length) * 100);
+  const complete = covered.size >= CATEGORIES.length;
   const r = 26;
   const circ = 2 * Math.PI * r;
 
@@ -287,12 +404,13 @@ function ChecklistSection({ items }: { items: EventItem[] }) {
         <div className="flex flex-1 flex-wrap gap-2">
           {CATEGORIES.map((cat) => {
             const done = covered.has(cat.slug);
+            const Icon = categoryIcon(cat.slug);
             return done ? (
               <span
                 key={cat.slug}
                 className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3.5 py-2 text-xs font-medium text-background"
               >
-                <Check size={12} strokeWidth={3} /> {cat.label}
+                <Icon size={12} aria-hidden="true" /> {cat.label}
               </span>
             ) : (
               <Link
@@ -300,12 +418,29 @@ function ChecklistSection({ items }: { items: EventItem[] }) {
                 href={`/marketplace?category=${cat.slug}`}
                 className="group inline-flex items-center gap-1.5 rounded-full border border-dashed border-border px-3.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
               >
-                <Plus size={12} /> {cat.label}
+                <Icon size={12} aria-hidden="true" /> {cat.label}
               </Link>
             );
           })}
         </div>
       </div>
+      {complete && (
+        <div className="animate-scale-in mt-4 flex items-center gap-3 rounded-2xl bg-foreground px-6 py-4 text-background">
+          <PartyPopper size={20} aria-hidden="true" />
+          <p className="text-sm font-medium">
+            ¡Checklist completo! Tienes todas las categorías cubiertas. Solo falta apartar y a celebrar.
+          </p>
+        </div>
+      )}
+      {!complete && covered.size > 0 && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          {pct < 40
+            ? "Buen comienzo — toca las categorías punteadas para seguir sumando."
+            : pct < 80
+              ? "¡Vas a mitad de camino! Tu evento va tomando forma."
+              : "¡Casi lo logras! Solo te faltan unas categorías."}
+        </p>
+      )}
     </section>
   );
 }
@@ -349,6 +484,24 @@ function ItemDateEditor({ item }: { item: EventItem }) {
 
 function ServicesSection({ items }: { items: EventItem[] }) {
   const { removeItem } = useEvent();
+  const groups = useMemo(() => {
+    const map = new Map<string, { label: string; icon: LucideIcon; items: EventItem[] }>();
+    for (const item of items) {
+      const key = item.vendor.category;
+      const existing = map.get(key);
+      if (existing) {
+        existing.items.push(item);
+      } else {
+        map.set(key, {
+          label: CATEGORIES.find((c) => c.slug === key)?.label ?? item.vendor.categoryLabel,
+          icon: categoryIcon(key),
+          items: [item],
+        });
+      }
+    }
+    return [...map.values()];
+  }, [items]);
+
   return (
     <section {...fade(400)}>
       <div className="flex items-center justify-between">
@@ -357,37 +510,49 @@ function ServicesSection({ items }: { items: EventItem[] }) {
           Agregar más <ArrowRight size={13} />
         </Link>
       </div>
-      <ul className="mt-4 flex flex-col gap-3">
-        {items.map((item, i) => (
-          <li
-            key={item.vendor.id}
-            className="flex animate-fade-in items-center gap-4 rounded-2xl border border-border p-4 opacity-0"
-            style={{ animationDelay: `${400 + i * 70}ms`, animationFillMode: "forwards" }}
-          >
-            <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-secondary">
-              <FadeImage src={item.vendor.images[0]} alt={item.vendor.name} fill className="object-cover" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{item.vendor.categoryLabel}</p>
-              <p className="truncate text-base font-medium text-foreground">{item.vendor.name}</p>
-              <div className="mt-2">
-                <ItemDateEditor item={item} />
-              </div>
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-2.5">
-              <span className="text-sm font-semibold text-foreground">{formatMXN(item.vendor.basePrice)}</span>
-              <button
-                type="button"
-                onClick={() => removeItem(item.vendor.id)}
-                className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive"
-                aria-label={`Quitar ${item.vendor.name}`}
-              >
-                <Trash2 size={15} />
-              </button>
-            </div>
-          </li>
+      <div className="mt-4 flex flex-col gap-8">
+        {groups.map((group) => (
+          <div key={group.label}>
+            <p className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <group.icon size={14} aria-hidden="true" />
+              {group.label}
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                {group.items.length}
+              </span>
+            </p>
+            <ul className="flex flex-col gap-3">
+              {group.items.map((item, i) => (
+                <li
+                  key={item.vendor.id}
+                  className="flex animate-fade-in items-center gap-4 rounded-2xl border border-border p-4 opacity-0 transition-shadow hover:shadow-md"
+                  style={{ animationDelay: `${400 + i * 70}ms`, animationFillMode: "forwards" }}
+                >
+                  <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-secondary">
+                    <FadeImage src={item.vendor.images[0]} alt={item.vendor.name} fill className="object-cover" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-medium text-foreground">{item.vendor.name}</p>
+                    <div className="mt-2">
+                      <ItemDateEditor item={item} />
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-2.5">
+                    <span className="text-sm font-semibold text-foreground">{formatMXN(item.vendor.basePrice)}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.vendor.id)}
+                      className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive"
+                      aria-label={`Quitar ${item.vendor.name}`}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
     </section>
   );
 }
@@ -495,14 +660,19 @@ function BudgetPanel({ items }: { items: EventItem[] }) {
           </div>
           <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-secondary">
             <div
-              className={cn("h-full rounded-full transition-all duration-700", over ? "bg-destructive" : "bg-foreground")}
+              className={cn(
+                "h-full rounded-full transition-all duration-700",
+                over ? "bg-destructive" : "bg-gradient-to-r from-foreground/50 to-foreground"
+              )}
               style={{ width: `${fillPct}%` }}
             />
           </div>
           <p className={cn("mt-2 text-xs leading-relaxed", over ? "text-destructive" : "text-muted-foreground")}>
             {over
-              ? `Te pasas por ${formatMXN(total - details.budget)}. Ajusta tu presupuesto o quita algún servicio.`
-              : `Vas bien: te quedan ${formatMXN(details.budget - total)} de margen.`}
+              ? `Te pasas por ${formatMXN(total - details.budget)} — ajusta tu presupuesto o quita algún servicio.`
+              : fillPct >= 80
+                ? `Casi llegas a tu límite: te quedan ${formatMXN(details.budget - total)} de margen.`
+                : `Vas perfecto: te quedan ${formatMXN(details.budget - total)} de margen.`}
           </p>
         </div>
 
@@ -646,45 +816,56 @@ export function MiEventoClient() {
   const [editingName, setEditingName] = useState(false);
 
   const displayName = details.name.trim() || "Mi evento";
+  const coveredCategories = new Set(items.map((i) => i.vendor.category));
+  const checklistComplete = items.length > 0 && coveredCategories.size >= CATEGORIES.length;
 
   return (
     <main className="min-h-screen bg-background pb-24">
       <MiEventoHeader count={items.length} />
 
       {/* Hero */}
-      <div className="px-6 pb-10 pt-32 md:px-12 md:pt-40 lg:px-20">
-        <p {...fade(0, "text-xs uppercase tracking-[0.28em] text-muted-foreground")}>
-          Planeador interactivo
-        </p>
-        <div {...fade(100)} className="mt-4 max-w-3xl">
-          {editingName ? (
-            <input
-              autoFocus
-              value={details.name}
-              onChange={(e) => updateDetails({ name: e.target.value })}
-              onBlur={() => setEditingName(false)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === "Escape") setEditingName(false);
-              }}
-              placeholder="Mi evento"
-              className="w-full border-b-2 border-foreground bg-transparent font-serif text-5xl font-medium leading-[0.95] tracking-tight text-foreground placeholder:text-muted-foreground/50 focus:outline-none md:text-7xl"
-              aria-label="Nombre de tu evento"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setEditingName(true)}
-              className="group flex items-start gap-3 text-left font-serif text-5xl font-medium leading-[0.95] tracking-tight text-foreground md:text-7xl"
-              title="Toca para nombrar tu evento"
-            >
-              <span className={cn(!details.name.trim() && "text-muted-foreground/60")}>{displayName}</span>
-              <Pencil size={22} className="mt-2 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-            </button>
-          )}
+      <div className="relative overflow-hidden px-6 pb-10 pt-32 md:px-12 md:pt-40 lg:px-20">
+        {/* Blobs decorativos */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <div className="animate-float absolute -top-24 right-[8%] h-72 w-72 rounded-full bg-foreground/[0.05] blur-3xl" />
+          <div className="animate-float absolute bottom-0 left-[4%] h-56 w-56 rounded-full bg-foreground/[0.04] blur-3xl [animation-delay:2s]" />
         </div>
-        <p {...fade(200, "mt-6 max-w-xl leading-relaxed text-muted-foreground")}>
-          Ponle nombre, elige la fecha y arma tu equipo de proveedores pieza por pieza. Todo se guarda automáticamente.
-        </p>
+        <div className="relative">
+          <p {...fade(0, "text-xs uppercase tracking-[0.28em] text-muted-foreground")}>
+            Planeador interactivo
+          </p>
+          <div {...fade(100)} className="mt-4 max-w-3xl">
+            {editingName ? (
+              <input
+                autoFocus
+                value={details.name}
+                onChange={(e) => updateDetails({ name: e.target.value })}
+                onBlur={() => setEditingName(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === "Escape") setEditingName(false);
+                }}
+                placeholder="Mi evento"
+                className="w-full border-b-2 border-foreground bg-transparent font-serif text-5xl font-medium leading-[0.95] tracking-tight text-foreground placeholder:text-muted-foreground/50 focus:outline-none md:text-7xl"
+                aria-label="Nombre de tu evento"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingName(true)}
+                className="group flex items-start gap-3 text-left font-serif text-5xl font-medium leading-[0.95] tracking-tight text-foreground md:text-7xl"
+                title="Toca para nombrar tu evento"
+              >
+                <span className={cn(!details.name.trim() && "text-muted-foreground/60")}>{displayName}</span>
+                <Pencil size={22} className="mt-2 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </button>
+            )}
+          </div>
+          <p {...fade(200, "mt-6 max-w-xl leading-relaxed text-muted-foreground")}>
+            Ponle nombre, elige la fecha y arma tu equipo de proveedores pieza por pieza. Todo se guarda automáticamente.
+          </p>
+          <SummaryBar items={items} />
+          <StepsGuide done={checklistComplete} />
+        </div>
       </div>
 
       {!hydrated ? (
@@ -693,7 +874,10 @@ export function MiEventoClient() {
         </div>
       ) : (
         <div className="flex flex-col gap-12 px-6 md:px-12 lg:px-20">
-          <DetailsSection />
+          <SectionNav show={items.length > 0} />
+          <div id="detalles" className="scroll-mt-32">
+            <DetailsSection />
+          </div>
           {details.type === "boda" && <WeddingCTA />}
           {items.length === 0 ? (
             <div {...fade(300)}>
@@ -703,8 +887,12 @@ export function MiEventoClient() {
             <>
               <ChecklistSection items={items} />
               <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
-                <ServicesSection items={items} />
-                <BudgetPanel items={items} />
+                <div id="servicios" className="scroll-mt-32">
+                  <ServicesSection items={items} />
+                </div>
+                <div id="presupuesto" className="scroll-mt-32">
+                  <BudgetPanel items={items} />
+                </div>
               </div>
             </>
           )}
