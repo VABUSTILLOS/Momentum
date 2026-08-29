@@ -45,7 +45,7 @@ export function PhilosophySection() {
           >
             <div className="relative h-full min-h-0 w-full overflow-hidden rounded-2xl">
               <Image
-                src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1400&q=85"
+                src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=1400&q=60"
                 alt="Música y DJ para eventos"
                 fill
                 className="object-cover"
@@ -56,7 +56,7 @@ export function PhilosophySection() {
             </div>
             <div className="relative h-full min-h-0 w-full overflow-hidden rounded-2xl">
               <Image
-                src="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1400&q=85"
+                src="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1400&q=60"
                 alt="Catering y banquetes"
                 fill
                 className="object-cover"

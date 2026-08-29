@@ -6,6 +6,7 @@ import { VENDORS, type Vendor } from "@/lib/marketplace-data";
 export interface EventItem {
   vendor: Vendor;
   date?: Date;
+  note?: string;
 }
 
 export type EventType = "boda" | "xv" | "cumpleanos" | "corporativo" | "otro";
@@ -23,6 +24,13 @@ export interface StoryMoment {
   text: string;
 }
 
+export type WeddingTheme = "arena" | "rosa" | "oliva" | "noche";
+
+export interface ItineraryEntry {
+  time: string;
+  label: string;
+}
+
 export interface WeddingSite {
   partner1: string;
   partner2: string;
@@ -35,11 +43,16 @@ export interface WeddingSite {
   dressCode: string;
   giftTable: string;
   story: StoryMoment[];
+  heroImage: string;
+  theme: WeddingTheme;
+  itinerary: ItineraryEntry[];
+  gallery: string[];
 }
 
 interface StoredItem {
   vendorId: string;
   date?: string;
+  note?: string;
 }
 
 interface StoredState {
@@ -62,6 +75,7 @@ interface EventContextValue {
   addItem: (vendor: Vendor, date?: Date) => void;
   removeItem: (vendorId: string) => void;
   updateItemDate: (vendorId: string, date?: Date) => void;
+  updateItemNote: (vendorId: string, note: string) => void;
   updateDetails: (patch: Partial<EventDetails>) => void;
   updateWedding: (patch: Partial<WeddingSite>) => void;
   clearEvent: () => void;
@@ -79,6 +93,16 @@ const DEFAULT_DETAILS: EventDetails = {
   budget: 150000,
 };
 
+export const DEFAULT_WEDDING_HERO =
+  "https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1920";
+
+export const DEFAULT_WEDDING_GALLERY: string[] = [
+  "https://images.pexels.com/photos/2959192/pexels-photo-2959192.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/1721558/pexels-photo-1721558.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/931177/pexels-photo-931177.jpeg?auto=compress&cs=tinysrgb&w=800",
+  "https://images.pexels.com/photos/1244627/pexels-photo-1244627.jpeg?auto=compress&cs=tinysrgb&w=800",
+];
+
 export const DEFAULT_WEDDING: WeddingSite = {
   partner1: "",
   partner2: "",
@@ -95,6 +119,15 @@ export const DEFAULT_WEDDING: WeddingSite = {
     { title: "", text: "" },
     { title: "", text: "" },
   ],
+  heroImage: DEFAULT_WEDDING_HERO,
+  theme: "arena",
+  itinerary: [
+    { time: "17:00", label: "Ceremonia" },
+    { time: "18:30", label: "Cocktail" },
+    { time: "20:00", label: "Recepción" },
+    { time: "22:00", label: "Primer baile" },
+  ],
+  gallery: DEFAULT_WEDDING_GALLERY,
 };
 
 function loadStoredState(): StoredState | null {
@@ -122,7 +155,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
           .map((item): EventItem | null => {
             const vendor = VENDORS.find((v) => v.id === item.vendorId);
             if (!vendor) return null;
-            return { vendor, date: item.date ? new Date(item.date) : undefined };
+            return { vendor, date: item.date ? new Date(item.date) : undefined, note: item.note };
           })
           .filter((item): item is EventItem => item !== null)
       );
@@ -144,6 +177,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
       items: items.map((item) => ({
         vendorId: item.vendor.id,
         date: item.date?.toISOString(),
+        note: item.note,
       })),
       details: {
         name: details.name,
@@ -179,6 +213,10 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.map((i) => (i.vendor.id === vendorId ? { ...i, date } : i)));
   }, []);
 
+  const updateItemNote = useCallback((vendorId: string, note: string) => {
+    setItems((prev) => prev.map((i) => (i.vendor.id === vendorId ? { ...i, note } : i)));
+  }, []);
+
   const updateDetails = useCallback((patch: Partial<EventDetails>) => {
     setDetails((prev) => ({ ...prev, ...patch }));
   }, []);
@@ -194,8 +232,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<EventContextValue>(
-    () => ({ items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateDetails, updateWedding, clearEvent }),
-    [items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateDetails, updateWedding, clearEvent]
+    () => ({ items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateItemNote, updateDetails, updateWedding, clearEvent }),
+    [items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateItemNote, updateDetails, updateWedding, clearEvent]
   );
 
   return <EventContext.Provider value={value}>{children}</EventContext.Provider>;

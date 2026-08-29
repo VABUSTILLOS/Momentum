@@ -12,14 +12,14 @@ export function GallerySection() {
   const lastScrollRef = useRef(0);
 
   const images = [
-    { src: "https://images.pexels.com/photos/169198/pexels-photo-169198.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", alt: "Boda al aire libre" },
-    { src: "https://images.pexels.com/photos/169190/pexels-photo-169190.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", alt: "Celebración junto al lago" },
-    { src: "https://images.pexels.com/photos/262978/pexels-photo-262978.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", alt: "Mesa de banquete" },
-    { src: "https://images.pexels.com/photos/931179/pexels-photo-931179.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", alt: "Detalles florales" },
-    { src: "https://images.pexels.com/photos/1486974/pexels-photo-1486974.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", alt: "Fiesta y pista de baile" },
-    { src: "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2", alt: "Recepción de boda" },
-    { src: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?auto=compress&cs=tinysrgb&w=1400&h=900&dpr=2", alt: "Celebración elegante" },
-    { src: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1600&q=85", alt: "Pareja de novios en la playa" },
+    { src: "https://images.pexels.com/photos/169198/pexels-photo-169198.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&fm=webp", alt: "Boda al aire libre" },
+    { src: "https://images.pexels.com/photos/169190/pexels-photo-169190.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&fm=webp", alt: "Celebración junto al lago" },
+    { src: "https://images.pexels.com/photos/262978/pexels-photo-262978.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&fm=webp", alt: "Mesa de banquete" },
+    { src: "https://images.pexels.com/photos/931179/pexels-photo-931179.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&fm=webp", alt: "Detalles florales" },
+    { src: "https://images.pexels.com/photos/1486974/pexels-photo-1486974.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&fm=webp", alt: "Fiesta y pista de baile" },
+    { src: "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&fm=webp", alt: "Recepción de boda" },
+    { src: "https://images.pexels.com/photos/958545/pexels-photo-958545.jpeg?auto=compress&cs=tinysrgb&w=1400&h=900&fm=webp", alt: "Celebración elegante" },
+    { src: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1600&q=60", alt: "Pareja de novios en la playa" },
   ];
 
   // Calculate section height based on content width

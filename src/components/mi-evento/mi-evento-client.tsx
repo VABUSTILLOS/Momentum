@@ -13,6 +13,7 @@ import {
   Check,
   Gem,
   Heart,
+  Hourglass,
   Landmark,
   Moon,
   Music,
@@ -20,11 +21,13 @@ import {
   PartyPopper,
   Pencil,
   Plus,
+  Printer,
   Shirt,
   Sparkles,
   Star,
   Sun,
   Trash2,
+  Undo2,
   Users,
   UtensilsCrossed,
   Wallet,
@@ -143,6 +146,16 @@ function SummaryBar({ items }: { items: EventItem[] }) {
     { icon: Sparkles, label: `${items.length} ${items.length === 1 ? "servicio" : "servicios"}` },
     { icon: Wallet, label: `${pct}% del presupuesto` },
   ];
+
+  if (details.date) {
+    const daysLeft = Math.ceil((details.date.getTime() - Date.now()) / 86400000);
+    if (daysLeft >= 0) {
+      pills.splice(1, 0, {
+        icon: Hourglass,
+        label: daysLeft === 0 ? "¡Es hoy!" : daysLeft === 1 ? "¡Falta 1 día!" : `Faltan ${daysLeft} días`,
+      });
+    }
+  }
 
   return (
     <div {...fade(300, "mt-8 flex flex-wrap gap-2")}>
@@ -445,6 +458,30 @@ function ChecklistSection({ items }: { items: EventItem[] }) {
   );
 }
 
+/* -------------------------------- Confetti --------------------------------- */
+
+const CONFETTI_COLORS = ["#f43f5e", "#f59e0b", "#10b981", "#3b82f6", "#a855f7", "#ec4899"];
+
+function Confetti({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[60] overflow-hidden">
+      <style>{`@keyframes confetti-fall { 0% { transform: translateY(-8vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(720deg); opacity: 0; } }`}</style>
+      {Array.from({ length: 36 }).map((_, i) => (
+        <span
+          key={i}
+          className="absolute top-0 block h-3 w-2 rounded-sm"
+          style={{
+            left: `${(i / 36) * 100 + (i % 3)}%`,
+            backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+            animation: `confetti-fall ${2.4 + (i % 5) * 0.35}s ease-in ${(i % 6) * 0.18}s forwards`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 /* -------------------------------- Servicios -------------------------------- */
 
 function ItemDateEditor({ item }: { item: EventItem }) {
@@ -482,8 +519,45 @@ function ItemDateEditor({ item }: { item: EventItem }) {
   );
 }
 
-function ServicesSection({ items }: { items: EventItem[] }) {
-  const { removeItem } = useEvent();
+function ItemNoteEditor({ item }: { item: EventItem }) {
+  const { updateItemNote } = useEvent();
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        defaultValue={item.note ?? ""}
+        placeholder="Ej. pedir paquete con saxofonista"
+        onBlur={(e) => {
+          updateItemNote(item.vendor.id, e.target.value.trim());
+          setEditing(false);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === "Escape") {
+            updateItemNote(item.vendor.id, e.currentTarget.value.trim());
+            setEditing(false);
+          }
+        }}
+        className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
+        aria-label={`Nota para ${item.vendor.name}`}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="group inline-flex items-center gap-1.5 text-left text-xs text-muted-foreground hover:text-foreground"
+    >
+      <Pencil size={11} className="shrink-0" />
+      <span className={cn("truncate", item.note && "italic")}>{item.note || "Agregar nota"}</span>
+    </button>
+  );
+}
+
+function ServicesSection({ items, onRemoveItem }: { items: EventItem[]; onRemoveItem: (item: EventItem) => void }) {
   const groups = useMemo(() => {
     const map = new Map<string, { label: string; icon: LucideIcon; items: EventItem[] }>();
     for (const item of items) {
@@ -532,15 +606,18 @@ function ServicesSection({ items }: { items: EventItem[] }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-base font-medium text-foreground">{item.vendor.name}</p>
-                    <div className="mt-2">
+                    <div className="mt-1.5">
                       <ItemDateEditor item={item} />
+                    </div>
+                    <div className="mt-1.5">
+                      <ItemNoteEditor item={item} />
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2.5">
                     <span className="text-sm font-semibold text-foreground">{formatMXN(item.vendor.basePrice)}</span>
                     <button
                       type="button"
-                      onClick={() => removeItem(item.vendor.id)}
+                      onClick={() => onRemoveItem(item)}
                       className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive"
                       aria-label={`Quitar ${item.vendor.name}`}
                     >
@@ -647,7 +724,17 @@ function BudgetPanel({ items }: { items: EventItem[] }) {
   return (
     <aside {...fade(500, "lg:sticky lg:top-28")}>
       <div className="rounded-2xl border border-border p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Presupuesto</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Presupuesto</p>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            title="Imprimir o guardar como PDF"
+          >
+            <Printer size={12} /> Imprimir
+          </button>
+        </div>
         <div className="mt-4 flex items-baseline justify-between">
           <span className="text-sm text-muted-foreground">Estimado base</span>
           <span className="font-serif text-3xl font-medium tracking-tight text-foreground">{formatMXN(total)}</span>
@@ -691,9 +778,12 @@ function BudgetPanel({ items }: { items: EventItem[] }) {
           </div>
           <ul className="mt-3 flex flex-col gap-1.5">
             {items.map((item) => (
-              <li key={item.vendor.id} className="flex items-center justify-between text-xs">
+              <li key={item.vendor.id} className="flex items-center justify-between gap-3 text-xs">
                 <span className="truncate text-muted-foreground">{item.vendor.name}</span>
-                <span className="shrink-0 font-medium text-foreground">{Math.round((item.vendor.basePrice / total) * 100)}%</span>
+                <span className="flex shrink-0 items-baseline gap-2">
+                  <span className="text-[10px] text-muted-foreground">apartado {formatMXN(apartadoDe(item.vendor.basePrice))}</span>
+                  <span className="font-medium text-foreground">{Math.round((item.vendor.basePrice / total) * 100)}%</span>
+                </span>
               </li>
             ))}
           </ul>
@@ -812,12 +902,45 @@ function EmptyState() {
 /* --------------------------------- Página ---------------------------------- */
 
 export function MiEventoClient() {
-  const { items, details, updateDetails, hydrated } = useEvent();
+  const { items, details, updateDetails, hydrated, removeItem, addItem, updateItemNote } = useEvent();
   const [editingName, setEditingName] = useState(false);
+  const [lastRemoved, setLastRemoved] = useState<EventItem | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
 
   const displayName = details.name.trim() || "Mi evento";
   const coveredCategories = new Set(items.map((i) => i.vendor.category));
   const checklistComplete = items.length > 0 && coveredCategories.size >= CATEGORIES.length;
+
+  const handleRemoveItem = (item: EventItem) => {
+    removeItem(item.vendor.id);
+    setLastRemoved(item);
+  };
+
+  const handleUndo = () => {
+    if (!lastRemoved) return;
+    addItem(lastRemoved.vendor, lastRemoved.date);
+    if (lastRemoved.note) updateItemNote(lastRemoved.vendor.id, lastRemoved.note);
+    setLastRemoved(null);
+  };
+
+  useEffect(() => {
+    if (!lastRemoved) return;
+    const t = setTimeout(() => setLastRemoved(null), 4500);
+    return () => clearTimeout(t);
+  }, [lastRemoved]);
+
+  useEffect(() => {
+    if (!hydrated || !checklistComplete) return;
+    try {
+      if (window.sessionStorage.getItem("momentum-checklist-celebrated")) return;
+      window.sessionStorage.setItem("momentum-checklist-celebrated", "1");
+    } catch {
+      // storage unavailable; celebrate anyway
+    }
+    setCelebrate(true);
+    const t = setTimeout(() => setCelebrate(false), 4800);
+    return () => clearTimeout(t);
+  }, [hydrated, checklistComplete]);
 
   return (
     <main className="min-h-screen bg-background pb-24">
@@ -888,7 +1011,7 @@ export function MiEventoClient() {
               <ChecklistSection items={items} />
               <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
                 <div id="servicios" className="scroll-mt-32">
-                  <ServicesSection items={items} />
+                  <ServicesSection items={items} onRemoveItem={handleRemoveItem} />
                 </div>
                 <div id="presupuesto" className="scroll-mt-32">
                   <BudgetPanel items={items} />
@@ -897,6 +1020,23 @@ export function MiEventoClient() {
             </>
           )}
           <RecommendationsSection items={items} />
+        </div>
+      )}
+
+      <Confetti show={celebrate} />
+
+      {lastRemoved && (
+        <div className="animate-scale-in fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-full border border-border bg-foreground px-5 py-3 shadow-xl">
+          <p className="text-sm text-background">
+            Quitaste <strong className="font-semibold">{lastRemoved.vendor.name}</strong>
+          </p>
+          <button
+            type="button"
+            onClick={handleUndo}
+            className="inline-flex items-center gap-1.5 rounded-full bg-background px-4 py-1.5 text-xs font-semibold text-foreground transition-opacity hover:opacity-80"
+          >
+            <Undo2 size={12} /> Deshacer
+          </button>
         </div>
       )}
     </main>

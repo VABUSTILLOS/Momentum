@@ -15,7 +15,7 @@ export function TestimonialsSection() {
       {/* About Image */}
       <div className="relative aspect-[16/9] w-full">
         <Image
-          src="https://images.pexels.com/photos/169193/pexels-photo-169193.jpeg?auto=compress&cs=tinysrgb&w=1600&h=1000&dpr=2"
+          src="https://images.pexels.com/photos/169193/pexels-photo-169193.jpeg?auto=compress&cs=tinysrgb&w=1600&h=1000&fm=webp"
           alt="Mountain peaks at sunrise"
           fill
           className="object-cover"

@@ -14,8 +14,10 @@ import {
   Moon,
   Pencil,
   PartyPopper,
+  Plus,
   Shirt,
   Sun,
+  Trash2,
   Users,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -27,18 +29,27 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { useEvent, type WeddingSite } from "@/lib/event-context";
+import { useEvent, type WeddingSite, type WeddingTheme } from "@/lib/event-context";
 import { cn } from "@/lib/utils";
 
-const HERO_IMAGE =
-  "https://images.pexels.com/photos/1444442/pexels-photo-1444442.jpeg?auto=compress&cs=tinysrgb&w=1920";
+const pexels = (id: number, w: number) =>
+  `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}`;
 
-const GALLERY_IMAGES = [
-  "https://images.pexels.com/photos/169190/pexels-photo-169190.jpeg?auto=compress&cs=tinysrgb&w=800",
-  "https://images.pexels.com/photos/265947/pexels-photo-265947.jpeg?auto=compress&cs=tinysrgb&w=800",
-  "https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800",
-  "https://images.pexels.com/photos/2253870/pexels-photo-2253870.jpeg?auto=compress&cs=tinysrgb&w=800",
+const HERO_OPTIONS: { id: string; label: string; url: string }[] = [
+  { id: "pareja", label: "La pareja", url: pexels(1043474, 1920) },
+  { id: "camino", label: "Camino al altar", url: pexels(2959192, 1920) },
+  { id: "ramo", label: "El ramo", url: pexels(1721558, 1920) },
+  { id: "celebracion", label: "Celebración", url: pexels(931177, 1920) },
+  { id: "recepcion", label: "La recepción", url: pexels(1244627, 1920) },
+  { id: "clasico", label: "Clásica", url: pexels(1444442, 1920) },
 ];
+
+const THEMES: Record<WeddingTheme, { label: string; accent: string; soft: string }> = {
+  arena: { label: "Arena", accent: "#a16207", soft: "rgba(161, 98, 7, 0.08)" },
+  rosa: { label: "Rosa", accent: "#be185d", soft: "rgba(190, 24, 93, 0.08)" },
+  oliva: { label: "Oliva", accent: "#4d7c0f", soft: "rgba(77, 124, 15, 0.08)" },
+  noche: { label: "Noche", accent: "#334155", soft: "rgba(51, 65, 85, 0.10)" },
+};
 
 const DEFAULT_STORY = [
   { title: "Cómo nos conocimos", text: "Todo empezó con una mirada y un café que duró horas." },
@@ -183,6 +194,16 @@ function EditSheet({
     set({ story });
   };
 
+  const setItineraryEntry = (index: number, patch: Partial<{ time: string; label: string }>) => {
+    const itinerary = wedding.itinerary.map((e, i) => (i === index ? { ...e, ...patch } : e));
+    set({ itinerary });
+  };
+
+  const setGalleryUrl = (index: number, url: string) => {
+    const gallery = wedding.gallery.map((u, i) => (i === index ? url : u));
+    set({ gallery });
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
@@ -193,6 +214,54 @@ function EditSheet({
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-5 px-4 pb-8">
+          <div id="edit-portada" className="scroll-mt-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Foto de portada</p>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {HERO_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => set({ heroImage: opt.url })}
+                  title={opt.label}
+                  aria-label={`Portada: ${opt.label}`}
+                  className={cn(
+                    "relative aspect-[4/3] overflow-hidden rounded-xl border-2 transition-all",
+                    wedding.heroImage === opt.url ? "border-foreground" : "border-transparent opacity-70 hover:opacity-100"
+                  )}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={opt.url.replace("w=1920", "w=400")} alt={opt.label} className="h-full w-full object-cover" />
+                  {wedding.heroImage === opt.url && (
+                    <span className="absolute right-1.5 top-1.5 inline-flex size-5 items-center justify-center rounded-full bg-foreground text-background">
+                      <Check size={11} />
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div id="edit-paleta" className="scroll-mt-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Paleta de color</p>
+            <div className="mt-2 flex gap-2">
+              {(Object.keys(THEMES) as WeddingTheme[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => set({ theme: t })}
+                  aria-label={`Paleta ${THEMES[t].label}`}
+                  className={cn(
+                    "flex flex-1 flex-col items-center gap-1.5 rounded-xl border-2 py-3 transition-all",
+                    wedding.theme === t ? "border-foreground" : "border-transparent opacity-70 hover:opacity-100"
+                  )}
+                >
+                  <span className="size-7 rounded-full border border-border" style={{ backgroundColor: THEMES[t].accent }} />
+                  <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    {THEMES[t].label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div id="edit-pareja" className="grid grid-cols-2 gap-3 scroll-mt-4">
             <EditField label="Nombre 1" value={wedding.partner1} onChange={(v) => set({ partner1: v })} placeholder="Mariana" />
             <EditField label="Nombre 2" value={wedding.partner2} onChange={(v) => set({ partner2: v })} placeholder="Diego" />
@@ -244,6 +313,73 @@ function EditSheet({
           <div id="edit-extras" className="flex flex-col gap-5 scroll-mt-4">
             <EditField label="Código de vestimenta" value={wedding.dressCode} onChange={(v) => set({ dressCode: v })} placeholder="Etiqueta rigurosa" />
             <EditField label="Mesa de regalos" value={wedding.giftTable} onChange={(v) => set({ giftTable: v })} placeholder="Liverpool · Evento 51234567" />
+          </div>
+          <div id="edit-itinerario" className="flex flex-col gap-3 scroll-mt-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Itinerario del día</p>
+            {wedding.itinerary.map((entry, i) => (
+              <div key={i} className="flex items-end gap-2">
+                <div className="w-24">
+                  <EditField label="Hora" value={entry.time} onChange={(v) => setItineraryEntry(i, { time: v })} placeholder="17:00" />
+                </div>
+                <div className="flex-1">
+                  <EditField label="Momento" value={entry.label} onChange={(v) => setItineraryEntry(i, { label: v })} placeholder="Ceremonia" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => set({ itinerary: wedding.itinerary.filter((_, j) => j !== i) })}
+                  disabled={wedding.itinerary.length <= 1}
+                  aria-label={`Quitar ${entry.label || `momento ${i + 1}`}`}
+                  className="mb-1 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive disabled:opacity-30"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {wedding.itinerary.length < 8 && (
+              <button
+                type="button"
+                onClick={() => set({ itinerary: [...wedding.itinerary, { time: "", label: "" }] })}
+                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-dashed border-border px-4 py-2.5 text-xs font-medium text-muted-foreground hover:border-foreground hover:text-foreground"
+              >
+                <Plus size={13} /> Agregar momento
+              </button>
+            )}
+          </div>
+          <div id="edit-galeria" className="flex flex-col gap-3 scroll-mt-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Galería de fotos</p>
+            {wedding.gallery.map((url, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-secondary">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+                </span>
+                <input
+                  value={url}
+                  onChange={(e) => setGalleryUrl(i, e.target.value)}
+                  placeholder="https://…"
+                  aria-label={`URL de foto ${i + 1}`}
+                  className="w-full min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <button
+                  type="button"
+                  onClick={() => set({ gallery: wedding.gallery.filter((_, j) => j !== i) })}
+                  disabled={wedding.gallery.length <= 1}
+                  aria-label={`Quitar foto ${i + 1}`}
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive disabled:opacity-30"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ))}
+            {wedding.gallery.length < 8 && (
+              <button
+                type="button"
+                onClick={() => set({ gallery: [...wedding.gallery, ""] })}
+                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-dashed border-border px-4 py-2.5 text-xs font-medium text-muted-foreground hover:border-foreground hover:text-foreground"
+              >
+                <Plus size={13} /> Agregar foto
+              </button>
+            )}
           </div>
         </div>
       </SheetContent>
@@ -397,7 +533,8 @@ function Ornament({ light }: { light?: boolean }) {
   return (
     <div
       aria-hidden="true"
-      className={cn("flex items-center justify-center gap-3", light ? "text-white/70" : "text-muted-foreground/50")}
+      className={cn("flex items-center justify-center gap-3", light && "text-white/70")}
+      style={light ? undefined : { color: "var(--wed-accent, currentColor)", opacity: 0.7 }}
     >
       <span className="h-px w-16 bg-current" />
       <Heart size={13} className="fill-current" />
@@ -413,10 +550,10 @@ function HeroSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => 
   return (
     <section id="inicio" className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 text-center text-white">
       <div className="animate-scale-in absolute inset-0">
-        <FadeImage src={HERO_IMAGE} alt="Boda" fill priority className="object-cover" />
+        <FadeImage src={wedding.heroImage} alt="Boda" fill priority className="object-cover" />
       </div>
       <div className="absolute inset-0 bg-black/45" />
-      <EditCornerButton label="Editar nombres" onClick={onEdit} />
+      <EditCornerButton label="Editar nombres y portada" onClick={onEdit} />
       <div className="relative z-10 flex flex-col items-center">
         <p {...fade(0, "text-xs uppercase tracking-[0.32em] opacity-90")}>Nos casamos</p>
         <h1 {...fade(150, "mt-6 font-serif text-6xl font-medium leading-[0.95] tracking-tight md:text-8xl")}>
@@ -455,8 +592,11 @@ function WelcomeSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () 
   return (
     <section className="relative mx-auto max-w-2xl px-6 py-20 text-center md:py-28">
       <EditCornerButton label="Editar mensaje" onClick={onEdit} />
-      <span {...fade(0, "inline-flex size-12 items-center justify-center rounded-full bg-secondary text-foreground")}>
-        <Heart size={20} className="fill-foreground" />
+      <span
+        {...fade(0, "inline-flex size-12 items-center justify-center rounded-full")}
+        style={{ animationDelay: "0ms", animationFillMode: "forwards", backgroundColor: "var(--wed-soft)", color: "var(--wed-accent)" }}
+      >
+        <Heart size={20} className="fill-current" />
       </span>
       <h2 {...fade(100, "mt-6 font-serif text-3xl font-medium tracking-tight text-foreground md:text-4xl")}>
         Bienvenidos a nuestra boda
@@ -469,13 +609,16 @@ function WelcomeSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () 
   );
 }
 
-function GallerySection() {
+function GallerySection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => void }) {
+  const photos = wedding.gallery.filter((u) => u.trim());
+  if (photos.length === 0) return null;
   return (
-    <section className="mx-auto max-w-5xl px-6 pb-20">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {GALLERY_IMAGES.map((src, i) => (
+    <section className="relative mx-auto max-w-5xl px-6 pb-20">
+      <EditCornerButton label="Editar galería" onClick={onEdit} />
+      <div className={cn("grid grid-cols-2 gap-3", photos.length > 2 && "md:grid-cols-4")}>
+        {photos.map((src, i) => (
           <div
-            key={src}
+            key={`${i}-${src}`}
             {...fade(i * 100, "group relative aspect-[3/4] overflow-hidden rounded-2xl bg-secondary")}
           >
             <FadeImage
@@ -509,7 +652,10 @@ function StorySection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () =>
       <ol className="relative mt-12 flex flex-col gap-10 border-l-2 border-border pl-8">
         {moments.map((m, i) => (
           <li key={i} {...fade(150 + i * 120, "relative")}>
-            <span className="absolute -left-[41px] top-1 inline-flex size-5 items-center justify-center rounded-full bg-foreground">
+            <span
+              className="absolute -left-[41px] top-1 inline-flex size-5 items-center justify-center rounded-full"
+              style={{ backgroundColor: "var(--wed-accent)" }}
+            >
               <Heart size={10} className="fill-background text-background" />
             </span>
             <p className="font-serif text-xl font-medium tracking-tight text-foreground">{m.title}</p>
@@ -535,7 +681,10 @@ function VenueCard({
   const hasVenue = venue.trim().length > 0;
   return (
     <div {...fade(delay, "flex flex-col items-center rounded-3xl border border-border p-8 text-center md:p-10")}>
-      <span className="inline-flex size-12 items-center justify-center rounded-full bg-secondary text-foreground">
+      <span
+        className="inline-flex size-12 items-center justify-center rounded-full"
+        style={{ backgroundColor: "var(--wed-soft)", color: "var(--wed-accent)" }}
+      >
         <MapPin size={20} />
       </span>
       <h3 className="mt-5 font-serif text-2xl font-medium tracking-tight text-foreground">{title}</h3>
@@ -571,14 +720,20 @@ function DetailsGrid({ wedding, onEditCeremony, onEditReception }: { wedding: We
       </div>
       <div {...fade(200, "mt-6 grid gap-6 md:grid-cols-2")}>
         <div className="flex flex-col items-center rounded-3xl border border-border p-8 text-center">
-          <span className="inline-flex size-12 items-center justify-center rounded-full bg-secondary text-foreground">
+          <span
+            className="inline-flex size-12 items-center justify-center rounded-full"
+            style={{ backgroundColor: "var(--wed-soft)", color: "var(--wed-accent)" }}
+          >
             <Shirt size={20} />
           </span>
           <h3 className="mt-5 font-serif text-2xl font-medium tracking-tight text-foreground">Código de vestimenta</h3>
           <p className="mt-3 text-base text-muted-foreground">{wedding.dressCode.trim() || "Etiqueta rigurosa"}</p>
         </div>
         <div className="flex flex-col items-center rounded-3xl border border-border p-8 text-center">
-          <span className="inline-flex size-12 items-center justify-center rounded-full bg-secondary text-foreground">
+          <span
+            className="inline-flex size-12 items-center justify-center rounded-full"
+            style={{ backgroundColor: "var(--wed-soft)", color: "var(--wed-accent)" }}
+          >
             <Users size={20} />
           </span>
           <h3 className="mt-5 font-serif text-2xl font-medium tracking-tight text-foreground">Invitados</h3>
@@ -591,12 +746,52 @@ function DetailsGrid({ wedding, onEditCeremony, onEditReception }: { wedding: We
   );
 }
 
+function ItinerarySection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => void }) {
+  const entries = wedding.itinerary.filter((e) => e.time.trim() || e.label.trim());
+  if (entries.length === 0) return null;
+  return (
+    <section id="itinerario" className="relative scroll-mt-24 px-6 pb-20 md:pb-28">
+      <EditCornerButton label="Editar itinerario" onClick={onEdit} />
+      <h2 {...fade(0, "text-center font-serif text-3xl font-medium tracking-tight text-foreground md:text-4xl")}>
+        Itinerario del día
+      </h2>
+      <div {...fade(100, "mt-6")}>
+        <Ornament />
+      </div>
+      <ol {...fade(200, "mx-auto mt-12 flex max-w-3xl flex-wrap items-start justify-center gap-y-8")}>
+        {entries.map((entry, i) => (
+          <li key={i} className="relative flex w-40 flex-col items-center px-4 text-center">
+            {i < entries.length - 1 && (
+              <span aria-hidden="true" className="absolute left-1/2 top-3.5 -z-10 h-px w-full bg-border" />
+            )}
+            <span
+              className="inline-flex size-7 items-center justify-center rounded-full"
+              style={{ backgroundColor: "var(--wed-accent)" }}
+            >
+              <span className="size-2 rounded-full bg-background" />
+            </span>
+            <p className="mt-3 font-serif text-lg font-medium tabular-nums text-foreground">{entry.time || "—"}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">{entry.label || "Momento"}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 function GiftSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => void }) {
   return (
-    <section id="regalos" className="relative scroll-mt-24 bg-secondary/60 px-6 py-20 md:py-28">
+    <section
+      id="regalos"
+      className="relative scroll-mt-24 px-6 py-20 md:py-28"
+      style={{ backgroundColor: "var(--wed-soft)" }}
+    >
       <EditCornerButton label="Editar mesa de regalos" onClick={onEdit} />
       <div className="mx-auto max-w-2xl text-center">
-        <span {...fade(0, "inline-flex size-12 items-center justify-center rounded-full bg-foreground text-background")}>
+        <span
+          {...fade(0, "inline-flex size-12 items-center justify-center rounded-full text-background")}
+          style={{ animationDelay: "0ms", animationFillMode: "forwards", backgroundColor: "var(--wed-accent)" }}
+        >
           <Gift size={20} />
         </span>
         <h2 {...fade(100, "mt-6 font-serif text-3xl font-medium tracking-tight text-foreground md:text-4xl")}>

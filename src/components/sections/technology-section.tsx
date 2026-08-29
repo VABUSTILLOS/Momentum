@@ -60,25 +60,25 @@ function ScrollRevealText({ text }: { text: string }) {
 
 const sideImages = [
   {
-    src: "https://images.pexels.com/photos/1729797/pexels-photo-1729797.jpeg?auto=compress&cs=tinysrgb&w=1200&h=900&dpr=2",
+    src: "https://images.pexels.com/photos/1729797/pexels-photo-1729797.jpeg?auto=compress&cs=tinysrgb&w=1200&h=900&fm=webp",
     alt: "Forest trail",
     position: "left",
     span: 1,
   },
   {
-    src: "https://images.pexels.com/photos/931179/pexels-photo-931179.jpeg?auto=compress&cs=tinysrgb&w=1200&h=900&dpr=2",
+    src: "https://images.pexels.com/photos/931179/pexels-photo-931179.jpeg?auto=compress&cs=tinysrgb&w=1200&h=900&fm=webp",
     alt: "Mountain peak",
     position: "left",
     span: 1,
   },
   {
-    src: "https://images.pexels.com/photos/1486974/pexels-photo-1486974.jpeg?auto=compress&cs=tinysrgb&w=1200&h=900&dpr=2",
+    src: "https://images.pexels.com/photos/1486974/pexels-photo-1486974.jpeg?auto=compress&cs=tinysrgb&w=1200&h=900&fm=webp",
     alt: "Alpine landscape",
     position: "right",
     span: 1,
   },
   {
-    src: "https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=1200&h=900&dpr=2",
+    src: "https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=1200&h=900&fm=webp",
     alt: "Snow mountain",
     position: "right",
     span: 1,
@@ -198,7 +198,7 @@ export function TechnologySection() {
               }}
             >
               <Image
-                src="https://images.pexels.com/photos/169190/pexels-photo-169190.jpeg?auto=compress&cs=tinysrgb&w=1400&h=900&dpr=2"
+                src="https://images.pexels.com/photos/169190/pexels-photo-169190.jpeg?auto=compress&cs=tinysrgb&w=1400&h=900&fm=webp"
                 alt="Aerial view of camping expedition in wilderness"
                 fill
                 className="object-cover"

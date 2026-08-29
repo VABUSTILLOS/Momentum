@@ -43,7 +43,7 @@ export const CATEGORIES: { slug: VendorCategory; label: string }[] = [
 ];
 
 const px = (id: number) =>
-  `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2`;
+  `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&fm=webp`;
 
 export const VENDORS: Vendor[] = [
   {
