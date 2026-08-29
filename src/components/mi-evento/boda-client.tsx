@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { createContext, useContext, useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -8,9 +8,11 @@ import {
   CalendarPlus,
   Check,
   Copy,
+  Eye,
   Gift,
   Heart,
   MapPin,
+  MessageCircle,
   Moon,
   Pencil,
   PartyPopper,
@@ -30,7 +32,15 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useEvent, type WeddingSite, type WeddingTheme } from "@/lib/event-context";
+import { Reveal } from "@/lib/use-reveal";
 import { cn } from "@/lib/utils";
+
+/** true = vista como invitado (oculta botones de edición) */
+const GuestModeContext = createContext(false);
+
+function useGuestMode() {
+  return useContext(GuestModeContext);
+}
 
 const pexels = (id: number, w: number) =>
   `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}`;
@@ -75,6 +85,8 @@ function mapsUrl(venue: string) {
 /* --------------------------- Botón editar sección --------------------------- */
 
 function EditCornerButton({ label, onClick }: { label: string; onClick: () => void }) {
+  const guestMode = useGuestMode();
+  if (guestMode) return null;
   return (
     <button
       type="button"
@@ -90,11 +102,13 @@ function EditCornerButton({ label, onClick }: { label: string; onClick: () => vo
 
 /* --------------------------------- Toolbar --------------------------------- */
 
-function BodaToolbar({ onEdit }: { onEdit: () => void }) {
+function BodaToolbar({ onEdit, guestMode, onToggleGuest }: { onEdit: () => void; guestMode: boolean; onToggleGuest: () => void }) {
   const [mounted, setMounted] = useState(false);
   const { resolvedTheme, setTheme } = useTheme();
 
   useEffect(() => setMounted(true), []);
+
+  if (guestMode) return null;
 
   return (
     <header className="fixed left-1/2 top-4 z-50 w-[90%] max-w-6xl -translate-x-1/2">
@@ -114,6 +128,15 @@ function BodaToolbar({ onEdit }: { onEdit: () => void }) {
         <div className="flex items-center gap-3">
           <button
             type="button"
+            onClick={onToggleGuest}
+            className="inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
+            aria-label="Ver la página como invitado"
+            title="Ver como invitado"
+          >
+            <Eye aria-hidden="true" />
+          </button>
+          <button
+            type="button"
             onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
             className="inline-flex size-9 items-center justify-center rounded-full border border-background/20 text-background hover:bg-background/10"
             aria-label={mounted && resolvedTheme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
@@ -131,6 +154,24 @@ function BodaToolbar({ onEdit }: { onEdit: () => void }) {
         </div>
       </div>
     </header>
+  );
+}
+
+/** Banner flotante en modo invitado */
+function GuestModeBanner({ onExit }: { onExit: () => void }) {
+  return (
+    <div className="animate-scale-in fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 flex-wrap items-center justify-center gap-3 rounded-full border border-border bg-foreground px-5 py-3 shadow-xl">
+      <p className="inline-flex items-center gap-2 text-sm text-background">
+        <Eye size={14} /> Estás viendo la página como tus invitados
+      </p>
+      <button
+        type="button"
+        onClick={onExit}
+        className="inline-flex items-center gap-1.5 rounded-full bg-background px-4 py-1.5 text-xs font-semibold text-foreground transition-opacity hover:opacity-80"
+      >
+        <Pencil size={12} /> Volver a editar
+      </button>
+    </div>
   );
 }
 
@@ -279,22 +320,40 @@ function EditSheet({
           <div id="edit-historia" className="flex flex-col gap-3 scroll-mt-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Nuestra historia</p>
             {wedding.story.map((moment, i) => (
-              <div key={i} className="flex flex-col gap-3 rounded-xl border border-border p-3">
+              <div key={i} className="relative flex flex-col gap-3 rounded-xl border border-border p-3">
+                <button
+                  type="button"
+                  onClick={() => set({ story: wedding.story.filter((_, j) => j !== i) })}
+                  disabled={wedding.story.length <= 1}
+                  aria-label={`Quitar momento ${i + 1}`}
+                  className="absolute right-2 top-2 inline-flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive disabled:opacity-30"
+                >
+                  <Trash2 size={12} />
+                </button>
                 <EditField
                   label={`Momento ${i + 1} · título`}
                   value={moment.title}
                   onChange={(v) => setMoment(i, { title: v })}
-                  placeholder={DEFAULT_STORY[i]?.title}
+                  placeholder={DEFAULT_STORY[i]?.title ?? "Nuestro momento"}
                 />
                 <EditField
                   label={`Momento ${i + 1} · texto`}
                   value={moment.text}
                   onChange={(v) => setMoment(i, { text: v })}
-                  placeholder={DEFAULT_STORY[i]?.text}
+                  placeholder={DEFAULT_STORY[i]?.text ?? "Cuenta este momento…"}
                   textarea
                 />
               </div>
             ))}
+            {wedding.story.length < 6 && (
+              <button
+                type="button"
+                onClick={() => set({ story: [...wedding.story, { title: "", text: "" }] })}
+                className="inline-flex items-center justify-center gap-1.5 rounded-full border border-dashed border-border px-4 py-2.5 text-xs font-medium text-muted-foreground hover:border-foreground hover:text-foreground"
+              >
+                <Plus size={13} /> Agregar momento
+              </button>
+            )}
           </div>
           <p id="edit-ceremonia" className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground scroll-mt-4">
             Ceremonia
@@ -504,6 +563,14 @@ function GuestActions({ wedding }: { wedding: WeddingSite }) {
     }
   };
 
+  const shareWhatsApp = () => {
+    const fecha = details.date
+      ? details.date.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+      : "muy pronto";
+    const text = `💍 ¡${names.label} se casan! Acompáñalos el ${fecha}. Todos los detalles y confirmación aquí: ${window.location.href}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
       {details.date && (
@@ -522,6 +589,13 @@ function GuestActions({ wedding }: { wedding: WeddingSite }) {
       >
         {copied ? <Check size={14} /> : <Copy size={14} />}
         {copied ? "¡Enlace copiado!" : "Copiar enlace"}
+      </button>
+      <button
+        type="button"
+        onClick={shareWhatsApp}
+        className="inline-flex items-center gap-2 rounded-full border border-white/40 px-5 py-2.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10"
+      >
+        <MessageCircle size={14} /> Compartir por WhatsApp
       </button>
     </div>
   );
@@ -546,10 +620,27 @@ function Ornament({ light }: { light?: boolean }) {
 function HeroSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => void }) {
   const { details } = useEvent();
   const names = coupleNames(wedding);
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => setScrollY(window.scrollY));
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   return (
     <section id="inicio" className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 text-center text-white">
-      <div className="animate-scale-in absolute inset-0">
+      <div
+        className="animate-scale-in absolute inset-0"
+        style={{ transform: `translateY(${Math.min(scrollY * 0.25, 200)}px) scale(1.08)` }}
+      >
         <FadeImage src={wedding.heroImage} alt="Boda" fill priority className="object-cover" />
       </div>
       <div className="absolute inset-0 bg-black/45" />
@@ -813,6 +904,8 @@ function RsvpSection({ wedding }: { wedding: WeddingSite }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [attending, setAttending] = useState<"si" | "no">("si");
+  const [companions, setCompanions] = useState(0);
+  const [allergies, setAllergies] = useState("");
   const names = coupleNames(wedding);
 
   if (sent) {
@@ -825,7 +918,7 @@ function RsvpSection({ wedding }: { wedding: WeddingSite }) {
           <h2 className="mt-6 font-serif text-3xl font-medium tracking-tight text-foreground">¡Gracias por confirmar!</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {attending === "si"
-              ? `${names.p1} y ${names.p2} no pueden esperar a celebrar contigo.`
+              ? `${names.p1} y ${names.p2} no pueden esperar a celebrar contigo${companions > 0 ? ` y tus ${companions} ${companions === 1 ? "acompañante" : "acompañantes"}` : ""}.`
               : "Te extrañaremos ese día. ¡Gracias por avisarnos!"}
           </p>
         </div>
@@ -885,6 +978,43 @@ function RsvpSection({ wedding }: { wedding: WeddingSite }) {
               </button>
             ))}
           </div>
+          {attending === "si" && (
+            <>
+              <div className="flex items-center justify-between rounded-full border border-border px-5 py-2.5">
+                <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                  <Users size={14} /> Acompañantes
+                </span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCompanions((c) => Math.max(0, c - 1))}
+                    disabled={companions === 0}
+                    aria-label="Quitar acompañante"
+                    className="inline-flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-30"
+                  >
+                    −
+                  </button>
+                  <span className="w-4 text-center text-sm font-semibold tabular-nums text-foreground">{companions}</span>
+                  <button
+                    type="button"
+                    onClick={() => setCompanions((c) => Math.min(5, c + 1))}
+                    disabled={companions === 5}
+                    aria-label="Agregar acompañante"
+                    className="inline-flex size-8 items-center justify-center rounded-full border border-border text-foreground disabled:opacity-30"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <textarea
+                value={allergies}
+                onChange={(e) => setAllergies(e.target.value)}
+                placeholder="Alergias o comentarios (opcional)"
+                rows={2}
+                className="w-full resize-none rounded-2xl border border-border bg-background px-5 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </>
+          )}
           <button
             type="submit"
             className="rounded-full px-5 py-3.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
@@ -939,12 +1069,18 @@ export function BodaClient() {
   const { wedding, hydrated } = useEvent();
   const [editOpen, setEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<string | null>(null);
+  const [guestMode, setGuestMode] = useState(false);
   const names = coupleNames(wedding);
   const theme = THEMES[wedding.theme] ?? THEMES.arena;
 
   const openEdit = (target: string) => {
     setEditTarget(target);
     setEditOpen(true);
+  };
+
+  const enterGuestMode = () => {
+    setEditOpen(false);
+    setGuestMode(true);
   };
 
   if (!hydrated) {
@@ -956,31 +1092,48 @@ export function BodaClient() {
   }
 
   return (
-    <main
-      className="min-h-screen bg-background"
-      style={{ "--wed-accent": theme.accent, "--wed-soft": theme.soft } as CSSProperties}
-    >
-      <BodaToolbar onEdit={() => openEdit("edit-portada")} />
-      <DotNav />
-      <EditSheet open={editOpen} onOpenChange={setEditOpen} target={editTarget} />
-      <HeroSection wedding={wedding} onEdit={() => openEdit("edit-portada")} />
-      <WelcomeSection wedding={wedding} onEdit={() => openEdit("edit-mensaje")} />
-      <GallerySection wedding={wedding} onEdit={() => openEdit("edit-galeria")} />
-      <StorySection wedding={wedding} onEdit={() => openEdit("edit-historia")} />
-      <DetailsGrid
-        wedding={wedding}
-        onEditCeremony={() => openEdit("edit-ceremonia")}
-        onEditReception={() => openEdit("edit-recepcion")}
-      />
-      <ItinerarySection wedding={wedding} onEdit={() => openEdit("edit-itinerario")} />
-      <GiftSection wedding={wedding} onEdit={() => openEdit("edit-extras")} />
-      <RsvpSection wedding={wedding} />
-      <footer className="border-t border-border px-6 py-10 text-center">
-        <p className="font-serif text-lg italic text-foreground">{names.label}</p>
-        <p className="mt-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Hecho con <Link href="/mi-evento" className="underline underline-offset-2 hover:text-foreground">Momentum</Link>
-        </p>
-      </footer>
-    </main>
+    <GuestModeContext.Provider value={guestMode}>
+      <main
+        className="min-h-screen bg-background"
+        style={{ "--wed-accent": theme.accent, "--wed-soft": theme.soft } as CSSProperties}
+      >
+        <BodaToolbar onEdit={() => openEdit("edit-portada")} guestMode={guestMode} onToggleGuest={enterGuestMode} />
+        {guestMode && <GuestModeBanner onExit={() => setGuestMode(false)} />}
+        <DotNav />
+        <EditSheet open={editOpen} onOpenChange={setEditOpen} target={editTarget} />
+        <HeroSection wedding={wedding} onEdit={() => openEdit("edit-portada")} />
+        <Reveal>
+          <WelcomeSection wedding={wedding} onEdit={() => openEdit("edit-mensaje")} />
+        </Reveal>
+        <Reveal>
+          <GallerySection wedding={wedding} onEdit={() => openEdit("edit-galeria")} />
+        </Reveal>
+        <Reveal>
+          <StorySection wedding={wedding} onEdit={() => openEdit("edit-historia")} />
+        </Reveal>
+        <Reveal>
+          <DetailsGrid
+            wedding={wedding}
+            onEditCeremony={() => openEdit("edit-ceremonia")}
+            onEditReception={() => openEdit("edit-recepcion")}
+          />
+        </Reveal>
+        <Reveal>
+          <ItinerarySection wedding={wedding} onEdit={() => openEdit("edit-itinerario")} />
+        </Reveal>
+        <Reveal>
+          <GiftSection wedding={wedding} onEdit={() => openEdit("edit-extras")} />
+        </Reveal>
+        <Reveal>
+          <RsvpSection wedding={wedding} />
+        </Reveal>
+        <footer className="border-t border-border px-6 py-10 text-center">
+          <p className="font-serif text-lg italic text-foreground">{names.label}</p>
+          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Hecho con <Link href="/mi-evento" className="underline underline-offset-2 hover:text-foreground">Momentum</Link>
+          </p>
+        </footer>
+      </main>
+    </GuestModeContext.Provider>
   );
 }

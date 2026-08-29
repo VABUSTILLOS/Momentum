@@ -3,10 +3,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { VENDORS, type Vendor } from "@/lib/marketplace-data";
 
+export type ItemStatus = "pendiente" | "apartado" | "confirmado";
+
 export interface EventItem {
   vendor: Vendor;
   date?: Date;
   note?: string;
+  status?: ItemStatus;
 }
 
 export type EventType = "boda" | "xv" | "cumpleanos" | "corporativo" | "otro";
@@ -53,6 +56,7 @@ interface StoredItem {
   vendorId: string;
   date?: string;
   note?: string;
+  status?: ItemStatus;
 }
 
 interface StoredState {
@@ -76,6 +80,7 @@ interface EventContextValue {
   removeItem: (vendorId: string) => void;
   updateItemDate: (vendorId: string, date?: Date) => void;
   updateItemNote: (vendorId: string, note: string) => void;
+  updateItemStatus: (vendorId: string, status: ItemStatus) => void;
   updateDetails: (patch: Partial<EventDetails>) => void;
   updateWedding: (patch: Partial<WeddingSite>) => void;
   clearEvent: () => void;
@@ -155,7 +160,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
           .map((item): EventItem | null => {
             const vendor = VENDORS.find((v) => v.id === item.vendorId);
             if (!vendor) return null;
-            return { vendor, date: item.date ? new Date(item.date) : undefined, note: item.note };
+            return { vendor, date: item.date ? new Date(item.date) : undefined, note: item.note, status: item.status };
           })
           .filter((item): item is EventItem => item !== null)
       );
@@ -178,6 +183,7 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
         vendorId: item.vendor.id,
         date: item.date?.toISOString(),
         note: item.note,
+        status: item.status,
       })),
       details: {
         name: details.name,
@@ -217,6 +223,10 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.map((i) => (i.vendor.id === vendorId ? { ...i, note } : i)));
   }, []);
 
+  const updateItemStatus = useCallback((vendorId: string, status: ItemStatus) => {
+    setItems((prev) => prev.map((i) => (i.vendor.id === vendorId ? { ...i, status } : i)));
+  }, []);
+
   const updateDetails = useCallback((patch: Partial<EventDetails>) => {
     setDetails((prev) => ({ ...prev, ...patch }));
   }, []);
@@ -232,8 +242,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<EventContextValue>(
-    () => ({ items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateItemNote, updateDetails, updateWedding, clearEvent }),
-    [items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateItemNote, updateDetails, updateWedding, clearEvent]
+    () => ({ items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateItemNote, updateItemStatus, updateDetails, updateWedding, clearEvent }),
+    [items, details, wedding, hydrated, addItem, removeItem, updateItemDate, updateItemNote, updateItemStatus, updateDetails, updateWedding, clearEvent]
   );
 
   return <EventContext.Provider value={value}>{children}</EventContext.Provider>;

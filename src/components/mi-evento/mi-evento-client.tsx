@@ -5,12 +5,15 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
+  BadgeCheck,
   CakeSlice,
   CalendarDays,
   Camera,
   Candy,
   Car,
   Check,
+  CircleDashed,
+  CircleDot,
   Gem,
   Heart,
   Hourglass,
@@ -22,6 +25,7 @@ import {
   Pencil,
   Plus,
   Printer,
+  Share2,
   Shirt,
   Sparkles,
   Star,
@@ -38,9 +42,10 @@ import { FadeImage } from "@/components/fade-image";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
-import { useEvent, type EventItem, type EventType } from "@/lib/event-context";
+import { useEvent, type EventItem, type EventType, type ItemStatus } from "@/lib/event-context";
 import { CATEGORIES, formatMXN, type Vendor, type VendorCategory } from "@/lib/marketplace-data";
 import { recommendVendors, type Recommendation } from "@/lib/recommendations";
+import { Reveal } from "@/lib/use-reveal";
 import { cn } from "@/lib/utils";
 
 const APARTADO_PCT = 0.1;
@@ -65,6 +70,93 @@ const CATEGORY_ICONS: Record<VendorCategory, LucideIcon> = {
 };
 
 const categoryIcon = (slug: VendorCategory) => CATEGORY_ICONS[slug] ?? Sparkles;
+
+/* ----------------------------- Estado por servicio ------------------------- */
+
+const STATUS_FLOW: ItemStatus[] = ["pendiente", "apartado", "confirmado"];
+
+const STATUS_META: Record<ItemStatus, { label: string; icon: LucideIcon; className: string }> = {
+  pendiente: {
+    label: "Pendiente",
+    icon: CircleDashed,
+    className: "border-dashed text-muted-foreground hover:text-foreground",
+  },
+  apartado: {
+    label: "Apartado",
+    icon: CircleDot,
+    className: "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  },
+  confirmado: {
+    label: "Confirmado",
+    icon: BadgeCheck,
+    className: "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  },
+};
+
+function ItemStatusChip({ item }: { item: EventItem }) {
+  const { updateItemStatus } = useEvent();
+  const status = item.status ?? "pendiente";
+  const meta = STATUS_META[status];
+  const next = STATUS_FLOW[(STATUS_FLOW.indexOf(status) + 1) % STATUS_FLOW.length];
+
+  return (
+    <button
+      type="button"
+      onClick={() => updateItemStatus(item.vendor.id, next)}
+      title={`Cambiar a "${STATUS_META[next].label}"`}
+      className={cn(
+        "inline-flex w-fit items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium transition-colors",
+        meta.className,
+      )}
+    >
+      <meta.icon size={11} />
+      {meta.label}
+    </button>
+  );
+}
+
+/* --------------------------- Progreso de planeación ------------------------ */
+
+function PlanningProgress({ items }: { items: EventItem[] }) {
+  const { details } = useEvent();
+  const covered = new Set(items.map((i) => i.vendor.category)).size;
+
+  const milestones = [
+    { done: !!details.date, label: "Fecha" },
+    { done: details.type !== "otro", label: "Tipo de evento" },
+    { done: items.length > 0, label: "Primer servicio" },
+    { done: covered >= Math.min(4, CATEGORIES.length), label: "4 categorías" },
+    { done: covered >= CATEGORIES.length, label: "Checklist completo" },
+  ];
+  const doneCount = milestones.filter((m) => m.done).length;
+  const pct = Math.round((doneCount / milestones.length) * 100);
+
+  const message =
+    pct === 100
+      ? "¡Tu evento está listo para brillar! ✨"
+      : pct >= 60
+        ? "Vas volando, ya casi está todo."
+        : pct >= 40
+          ? "Buen ritmo, sigue así."
+          : "Apenas comenzando — tú puedes.";
+
+  return (
+    <div {...fade(350, "mt-6 max-w-md")}>
+      <div className="flex items-baseline justify-between text-xs">
+        <span className="font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Tu planeación va {pct}%
+        </span>
+        <span className="text-muted-foreground">{message}</span>
+      </div>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-foreground/10">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-foreground/50 to-foreground transition-all duration-700"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
 /* ---------------------------------- Header --------------------------------- */
 
@@ -134,6 +226,7 @@ function SummaryBar({ items }: { items: EventItem[] }) {
   const { details } = useEvent();
   const total = items.reduce((s, i) => s + i.vendor.basePrice, 0);
   const pct = Math.min(100, Math.round((total / details.budget) * 100));
+  const apartados = items.filter((i) => i.status === "apartado" || i.status === "confirmado").length;
 
   const pills = [
     {
@@ -146,6 +239,16 @@ function SummaryBar({ items }: { items: EventItem[] }) {
     { icon: Sparkles, label: `${items.length} ${items.length === 1 ? "servicio" : "servicios"}` },
     { icon: Wallet, label: `${pct}% del presupuesto` },
   ];
+
+  if (items.length > 0) {
+    pills.push({
+      icon: BadgeCheck,
+      label:
+        apartados === 0
+          ? "Ninguno apartado aún"
+          : `${apartados} de ${items.length} ${items.length === 1 ? "apartado" : "apartados"}`,
+    });
+  }
 
   if (details.date) {
     const daysLeft = Math.ceil((details.date.getTime() - Date.now()) / 86400000);
@@ -557,6 +660,48 @@ function ItemNoteEditor({ item }: { item: EventItem }) {
   );
 }
 
+function ClearEventButton() {
+  const { clearEvent } = useEvent();
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-4">
+        <p className="text-sm text-foreground">¿Seguro? Se quitarán todos los servicios y detalles.</p>
+        <button
+          type="button"
+          onClick={() => {
+            clearEvent();
+            setConfirming(false);
+          }}
+          className="rounded-full bg-destructive px-4 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-85"
+        >
+          Sí, vaciar todo
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirming(false)}
+          className="rounded-full border border-border px-4 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          Cancelar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex justify-center">
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-destructive"
+      >
+        <Trash2 size={12} /> Vaciar mi evento
+      </button>
+    </div>
+  );
+}
+
 function ServicesSection({ items, onRemoveItem }: { items: EventItem[]; onRemoveItem: (item: EventItem) => void }) {
   const groups = useMemo(() => {
     const map = new Map<string, { label: string; icon: LucideIcon; items: EventItem[] }>();
@@ -612,6 +757,9 @@ function ServicesSection({ items, onRemoveItem }: { items: EventItem[]; onRemove
                     <div className="mt-1.5">
                       <ItemNoteEditor item={item} />
                     </div>
+                    <div className="mt-2">
+                      <ItemStatusChip item={item} />
+                    </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2.5">
                     <span className="text-sm font-semibold text-foreground">{formatMXN(item.vendor.basePrice)}</span>
@@ -629,6 +777,9 @@ function ServicesSection({ items, onRemoveItem }: { items: EventItem[]; onRemove
             </ul>
           </div>
         ))}
+      </div>
+      <div className="mt-10">
+        <ClearEventButton />
       </div>
     </section>
   );
@@ -715,6 +866,51 @@ function RecommendationsSection({ items }: { items: EventItem[] }) {
 
 /* ------------------------------- Presupuesto ------------------------------- */
 
+function ShareSummaryButton({ items }: { items: EventItem[] }) {
+  const { details } = useEvent();
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const total = items.reduce((s, i) => s + i.vendor.basePrice, 0);
+    const lines = [
+      `🎉 ${details.name.trim() || "Mi evento"}${details.type !== "otro" ? ` (${EVENT_TYPES.find((t) => t.id === details.type)?.label})` : ""}`,
+      details.date
+        ? `📅 ${details.date.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}`
+        : "📅 Fecha por definir",
+      `👥 ${details.guests} invitados`,
+      "",
+      ...items.map((i) => {
+        const s = i.status === "confirmado" ? "✅" : i.status === "apartado" ? "🔖" : "⬜";
+        return `${s} ${i.vendor.name} — ${formatMXN(i.vendor.basePrice)}`;
+      }),
+      "",
+      `💰 Total estimado: ${formatMXN(total)}`,
+      `🔑 Apartado hoy (10%): ${formatMXN(apartadoDe(total))}`,
+      "",
+      "Armado con Momentum ✨",
+    ];
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard unavailable
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleShare}
+      className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+      title="Copia el resumen para mandarlo por WhatsApp"
+    >
+      {copied ? <Check size={12} /> : <Share2 size={12} />}
+      {copied ? "¡Copiado!" : "Compartir"}
+    </button>
+  );
+}
+
 function BudgetPanel({ items }: { items: EventItem[] }) {
   const { details } = useEvent();
   const total = items.reduce((sum, item) => sum + item.vendor.basePrice, 0);
@@ -726,14 +922,17 @@ function BudgetPanel({ items }: { items: EventItem[] }) {
       <div className="rounded-2xl border border-border p-6">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Presupuesto</p>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-            title="Imprimir o guardar como PDF"
-          >
-            <Printer size={12} /> Imprimir
-          </button>
+          <div className="flex gap-1.5">
+            <ShareSummaryButton items={items} />
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              title="Imprimir o guardar como PDF"
+            >
+              <Printer size={12} /> Imprimir
+            </button>
+          </div>
         </div>
         <div className="mt-4 flex items-baseline justify-between">
           <span className="text-sm text-muted-foreground">Estimado base</span>
@@ -902,7 +1101,7 @@ function EmptyState() {
 /* --------------------------------- Página ---------------------------------- */
 
 export function MiEventoClient() {
-  const { items, details, updateDetails, hydrated, removeItem, addItem, updateItemNote } = useEvent();
+  const { items, details, updateDetails, hydrated, removeItem, addItem, updateItemNote, updateItemStatus } = useEvent();
   const [editingName, setEditingName] = useState(false);
   const [lastRemoved, setLastRemoved] = useState<EventItem | null>(null);
   const [celebrate, setCelebrate] = useState(false);
@@ -920,6 +1119,7 @@ export function MiEventoClient() {
     if (!lastRemoved) return;
     addItem(lastRemoved.vendor, lastRemoved.date);
     if (lastRemoved.note) updateItemNote(lastRemoved.vendor.id, lastRemoved.note);
+    if (lastRemoved.status) updateItemStatus(lastRemoved.vendor.id, lastRemoved.status);
     setLastRemoved(null);
   };
 
@@ -987,6 +1187,7 @@ export function MiEventoClient() {
             Ponle nombre, elige la fecha y arma tu equipo de proveedores pieza por pieza. Todo se guarda automáticamente.
           </p>
           <SummaryBar items={items} />
+          <PlanningProgress items={items} />
           <StepsGuide done={checklistComplete} />
         </div>
       </div>
@@ -998,28 +1199,40 @@ export function MiEventoClient() {
       ) : (
         <div className="flex flex-col gap-12 px-6 md:px-12 lg:px-20">
           <SectionNav show={items.length > 0} />
-          <div id="detalles" className="scroll-mt-32">
-            <DetailsSection />
-          </div>
-          {details.type === "boda" && <WeddingCTA />}
+          <Reveal>
+            <div id="detalles" className="scroll-mt-32">
+              <DetailsSection />
+            </div>
+          </Reveal>
+          {details.type === "boda" && (
+            <Reveal>
+              <WeddingCTA />
+            </Reveal>
+          )}
           {items.length === 0 ? (
             <div {...fade(300)}>
               <EmptyState />
             </div>
           ) : (
             <>
-              <ChecklistSection items={items} />
-              <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
-                <div id="servicios" className="scroll-mt-32">
-                  <ServicesSection items={items} onRemoveItem={handleRemoveItem} />
+              <Reveal>
+                <ChecklistSection items={items} />
+              </Reveal>
+              <Reveal>
+                <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
+                  <div id="servicios" className="scroll-mt-32">
+                    <ServicesSection items={items} onRemoveItem={handleRemoveItem} />
+                  </div>
+                  <div id="presupuesto" className="scroll-mt-32">
+                    <BudgetPanel items={items} />
+                  </div>
                 </div>
-                <div id="presupuesto" className="scroll-mt-32">
-                  <BudgetPanel items={items} />
-                </div>
-              </div>
+              </Reveal>
             </>
           )}
-          <RecommendationsSection items={items} />
+          <Reveal>
+            <RecommendationsSection items={items} />
+          </Reveal>
         </div>
       )}
 
