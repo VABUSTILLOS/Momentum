@@ -10,6 +10,13 @@ export function useGuestMode() {
   return useContext(GuestModeContext);
 }
 
+/** Nombre del invitado cuando el enlace es un pase personalizado (#…&inv=Nombre) */
+export const GuestNameContext = createContext<string | null>(null);
+
+export function useGuestName() {
+  return useContext(GuestNameContext);
+}
+
 export interface BodaViewDetails {
   date?: Date;
   guests: number;

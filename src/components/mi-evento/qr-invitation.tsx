@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, Printer, QrCode } from "lucide-react";
+import { Download, Printer, QrCode, Ticket, Copy } from "lucide-react";
 import QRCode from "qrcode";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -22,16 +23,20 @@ export function QrInvitationSheet({
   url,
   namesLabel,
   dateLabel,
+  personalize,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   url: string;
   namesLabel: string;
   dateLabel: string;
+  /** Devuelve la URL con pase personalizado para un nombre de invitado */
+  personalize?: (invName: string) => string;
 }) {
   const isMobile = useIsMobile();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [invName, setInvName] = useState("");
 
   useEffect(() => {
     if (!open || !url) return;
@@ -71,6 +76,21 @@ export function QrInvitationSheet({
   const printCard = () => {
     if (!dataUrl) return;
     requestAnimationFrame(() => window.print());
+  };
+
+  const copyPersonalized = async () => {
+    if (!personalize) return;
+    const name = invName.trim();
+    if (!name) {
+      toast.error("Escribe el nombre de tu invitado");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(personalize(name));
+      toast.success(`Pase personalizado para ${name} copiado`);
+    } catch {
+      toast.error("No pudimos copiar el enlace");
+    }
   };
 
   return (
@@ -119,6 +139,36 @@ export function QrInvitationSheet({
         <p className="text-center text-xs text-muted-foreground">
           El código se genera en tu dispositivo; el enlace nunca pasa por un servidor.
         </p>
+
+        {personalize && (
+          <div className="rounded-2xl border border-border bg-secondary/30 p-4">
+            <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Ticket size={16} aria-hidden="true" /> Pase personalizado
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Tu invitado verá su nombre en la portada y el RSVP ya vendrá con sus datos.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <input
+                type="text"
+                value={invName}
+                onChange={(e) => setInvName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && copyPersonalized()}
+                placeholder="Ej. María García"
+                maxLength={60}
+                className="min-h-11 flex-1 rounded-full border border-border bg-background px-4 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-foreground/30"
+                aria-label="Nombre del invitado para personalizar el enlace"
+              />
+              <button
+                type="button"
+                onClick={copyPersonalized}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-background transition-opacity hover:opacity-90"
+              >
+                <Copy size={14} aria-hidden="true" /> Copiar
+              </button>
+            </div>
+          </div>
+        )}
       </SheetContent>
 
       {/* Tarjeta imprimible: solo visible al imprimir */}

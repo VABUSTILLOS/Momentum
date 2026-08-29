@@ -9,11 +9,13 @@ import {
   CalendarPlus,
   Camera,
   Check,
+  ChevronDown,
   ClipboardList,
   Copy,
   ExternalLink,
   Eye,
   Gift,
+  Wallet,
   Heart,
   HelpCircle,
   Home,
@@ -32,6 +34,7 @@ import {
   Share2,
   Shirt,
   Sun,
+  Ticket,
   Trash2,
   Users,
 } from "lucide-react";
@@ -40,6 +43,7 @@ import { toast } from "sonner";
 import { motion, useReducedMotion, useScroll, useSpring, AnimatePresence } from "framer-motion";
 import { FadeImage } from "@/components/fade-image";
 import { AlbumSection } from "@/components/mi-evento/album-section";
+import { isWeddingDay } from "@/lib/album";
 import { CommandPalette, PaletteButton, usePaletteHotkey, type PaletteGroup } from "@/components/mi-evento/command-palette";
 import { FadeUp, Magnetic, OrnamentDivider, SectionHeading, Tilt } from "@/components/mi-evento/editorial";
 import { QrInvitationSheet } from "@/components/mi-evento/qr-invitation";
@@ -71,6 +75,7 @@ import {
   decodeWeddingShare,
   encodeWeddingShare,
   useEvent,
+  type RegistryEntry,
   type WeddingShare,
   type WeddingSite,
   type WeddingTheme,
@@ -81,8 +86,10 @@ import { cn } from "@/lib/utils";
 import {
   BodaViewDetailsContext,
   GuestModeContext,
+  GuestNameContext,
   useBodaDetails,
   useGuestMode,
+  useGuestName,
   type BodaViewDetails,
 } from "@/components/mi-evento/boda-contexts";
 
@@ -411,6 +418,37 @@ function SharedBanner() {
   );
 }
 
+/** Tarjeta de pase personalizado tras el hero (#…&inv=Nombre) */
+function GuestPassCard({ name }: { name: string }) {
+  return (
+    <FadeUp className="mx-auto -mt-4 mb-6 w-full max-w-xl px-6">
+      <div
+        className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-card p-7 text-center shadow-[0_20px_60px_-30px_rgba(28,25,23,0.35)]"
+        style={{ borderColor: "color-mix(in srgb, var(--wed-accent) 35%, transparent)" }}
+      >
+        <div
+          className="flex h-12 w-12 items-center justify-center rounded-full font-serif text-lg"
+          style={{ background: "var(--wed-soft)", color: "var(--wed-accent)" }}
+        >
+          {name.charAt(0).toUpperCase()}
+        </div>
+        <p className="font-serif text-2xl text-foreground">
+          <span className="italic" style={{ color: "var(--wed-accent)" }}>{name}</span>, esta invitación es para ti
+        </p>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          Nos haría muy felices contar contigo. Confirma tu asistencia al final de la página; tu nombre ya está listo.
+        </p>
+        <a
+          href="#rsvp"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-6 text-sm font-medium text-background transition-opacity hover:opacity-90"
+        >
+          <Ticket size={16} aria-hidden="true" /> Confirmar asistencia
+        </a>
+      </div>
+    </FadeUp>
+  );
+}
+
 /* ------------------------------- Panel edición ------------------------------ */
 
 function EditField({
@@ -503,7 +541,7 @@ function EditSheet({
     set({ gallery });
   };
 
-  const setRegistry = (index: number, patch: Partial<{ label: string; url: string }>) => {
+  const setRegistry = (index: number, patch: Partial<RegistryEntry>) => {
     const registries = wedding.registries.map((r, i) => (i === index ? { ...r, ...patch } : r));
     set({ registries });
   };
@@ -660,21 +698,26 @@ function EditSheet({
             <div className="flex flex-col gap-3">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground">Mesas de regalos</p>
               {wedding.registries.map((reg, i) => (
-                <div key={i} className="flex items-end gap-2">
-                  <div className="w-2/5">
-                    <EditField label="Tienda" value={reg.label} onChange={(v) => setRegistry(i, { label: v })} placeholder="Liverpool" />
+                <div key={i} className="rounded-2xl border border-border p-3">
+                  <div className="flex items-end gap-2">
+                    <div className="w-2/5">
+                      <EditField label="Tienda" value={reg.label} onChange={(v) => setRegistry(i, { label: v })} placeholder="Liverpool" />
+                    </div>
+                    <div className="flex-1">
+                      <EditField label="Enlace (opcional)" value={reg.url} onChange={(v) => setRegistry(i, { url: v })} placeholder="https://…" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => set({ registries: wedding.registries.filter((_, j) => j !== i) })}
+                      aria-label={`Quitar mesa de regalos ${i + 1}`}
+                      className="mb-1 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                  <div className="flex-1">
-                    <EditField label="Enlace (opcional)" value={reg.url} onChange={(v) => setRegistry(i, { url: v })} placeholder="https://…" />
+                  <div className="mt-3">
+                    <EditField label="Número de evento (opcional)" value={reg.eventNumber ?? ""} onChange={(v) => setRegistry(i, { eventNumber: v })} placeholder="51234567" />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => set({ registries: wedding.registries.filter((_, j) => j !== i) })}
-                    aria-label={`Quitar mesa de regalos ${i + 1}`}
-                    className="mb-1 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-destructive"
-                  >
-                    <Trash2 size={14} />
-                  </button>
                 </div>
               ))}
               {wedding.registries.length < 6 && (
@@ -686,6 +729,12 @@ function EditSheet({
                   <Plus size={13} /> Agregar mesa de regalos
                 </button>
               )}
+              <EditField
+                label="Lluvia de sobres (CLABE o tarjeta, opcional)"
+                value={wedding.cashFund}
+                onChange={(v) => set({ cashFund: v })}
+                placeholder="0123 4567 8901 2345 67"
+              />
             </div>
           </div>
           <div id="edit-alojamiento" className="flex flex-col gap-5 scroll-mt-4">
@@ -872,6 +921,36 @@ function FlipNumber({ value, reduce }: { value: number; reduce: boolean | null }
   );
 }
 
+/** Confetti de una sola vez por sesión para el día de la boda */
+function DayOfConfetti() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.sessionStorage.getItem("momentum-dayof-confetti")) return;
+    window.sessionStorage.setItem("momentum-dayof-confetti", "1");
+    setShow(true);
+    const id = setTimeout(() => setShow(false), 4800);
+    return () => clearTimeout(id);
+  }, []);
+  if (!show) return null;
+  return (
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[60] overflow-hidden">
+      <style>{`@keyframes rsvp-confetti-fall { 0% { transform: translateY(-8vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(720deg); opacity: 0; } }`}</style>
+      {Array.from({ length: 36 }).map((_, i) => (
+        <span
+          key={i}
+          className="absolute top-0 block h-3 w-2 rounded-sm"
+          style={{
+            left: `${(i / 36) * 100 + (i % 3)}%`,
+            backgroundColor: RSVP_CONFETTI[i % RSVP_CONFETTI.length],
+            animation: `rsvp-confetti-fall ${2.4 + (i % 5) * 0.35}s ease-in ${(i % 6) * 0.18}s forwards`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function Countdown({ date }: { date?: Date }) {
   const t = useCountdown(date);
   const reduceMotion = useReducedMotion();
@@ -888,10 +967,26 @@ function Countdown({ date }: { date?: Date }) {
   if (!t) {
     return <div className="mt-8 h-20" aria-hidden="true" />;
   }
+  if (isWeddingDay(date)) {
+    return (
+      <div className="mt-8 flex flex-col items-center gap-4">
+        <DayOfConfetti />
+        <p className="animate-scale-in inline-flex items-center gap-2 rounded-full bg-background px-7 py-3.5 font-serif text-2xl italic text-foreground shadow-[0_20px_60px_-30px_rgba(0,0,0,0.6)]">
+          <PartyPopper size={20} aria-hidden="true" /> ¡Hoy es el día!
+        </p>
+        <a
+          href="#album"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/40 bg-white/10 px-6 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+        >
+          <Camera size={16} aria-hidden="true" /> Sube tus fotos al álbum del gran día
+        </a>
+      </div>
+    );
+  }
   if (t.done) {
     return (
       <p className="animate-scale-in mt-8 inline-flex items-center gap-2 rounded-full bg-background px-6 py-3 font-serif text-xl italic text-foreground">
-        <PartyPopper size={18} /> ¡Hoy es el día!
+        <Heart size={18} aria-hidden="true" /> ¡Ya se casaron!
       </p>
     );
   }
@@ -1042,6 +1137,7 @@ function Ornament({ light }: { light?: boolean }) {
 
 function HeroSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => void }) {
   const details = useBodaDetails();
+  const guestName = useGuestName();
   const names = coupleNames(wedding);
   const [scrollY, setScrollY] = useState(0);
 
@@ -1079,6 +1175,12 @@ function HeroSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => 
           {names.p2.charAt(0)}
         </div>
         <p {...fade(80, "mt-6 text-xs uppercase tracking-[0.32em] opacity-90")}>Nos casamos</p>
+        {guestName && (
+          <p {...fade(120, "mt-4 rounded-full border border-white/30 bg-white/10 px-5 py-2 text-sm tracking-wide backdrop-blur-sm")}>
+            <span className="font-serif italic text-[#e7c887]">{guestName}</span>
+            <span className="opacity-90">, tienes un lugar en este día</span>
+          </p>
+        )}
         <h1
           {...fade(150, "mt-6 break-words px-4 font-serif text-[clamp(2.75rem,11vw,7rem)] font-medium leading-[0.95] tracking-tight sm:px-0")}
         >
@@ -1102,10 +1204,16 @@ function HeroSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => 
           <GuestActions wedding={wedding} />
         </div>
       </div>
-      <div className="absolute bottom-8 z-10 flex flex-col items-center gap-3 opacity-80">
-        <span className="text-[10px] uppercase tracking-[0.28em]">Desliza</span>
-        <span className="animate-scrollcue block h-10 w-px bg-white/80" />
-      </div>
+      <a
+        href="#detalles"
+        className="absolute bottom-8 z-10 flex flex-col items-center gap-2 transition-opacity duration-500"
+        style={{ opacity: Math.max(0, 0.9 - scrollY / 200), pointerEvents: scrollY > 200 ? "none" : "auto" }}
+        aria-label="Desliza para conocer más"
+      >
+        <span className="text-[10px] uppercase tracking-[0.28em]">Desliza para conocer más</span>
+        <ChevronDown size={18} className="animate-scrollcue-bounce" aria-hidden="true" />
+        <span className="animate-scrollcue block h-8 w-px bg-white/80" aria-hidden="true" />
+      </a>
     </section>
   );
 }
@@ -1414,6 +1522,17 @@ function ItinerarySection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: (
 function GiftSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => void }) {
   const registries = wedding.registries.filter((r) => r.label.trim());
   const legacy = wedding.giftTable.trim();
+  const cashFund = wedding.cashFund.trim();
+
+  const copyText = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copiado`);
+    } catch {
+      toast.error("No pudimos copiarlo");
+    }
+  };
+
   return (
     <section
       id="regalos"
@@ -1437,30 +1556,40 @@ function GiftSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => 
           Tu presencia es nuestro mejor regalo, pero si deseas tener un detalle con nosotros:
         </p>
         {registries.length > 0 ? (
-          <div {...fade(300, "mt-6 flex flex-wrap items-center justify-center gap-2")}>
+          <div {...fade(300, "mt-6 flex flex-col items-stretch gap-3 sm:items-center")}>
             {registries.map((reg, i) => {
               const url = reg.url.trim();
-              if (url) {
-                const href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
-                return (
-                  <a
-                    key={i}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-6 py-3 font-serif text-lg italic text-foreground transition-colors hover:border-foreground"
-                  >
-                    {reg.label} <ExternalLink size={13} className="not-italic" />
-                  </a>
-                );
-              }
+              const href = url ? (/^https?:\/\//i.test(url) ? url : `https://${url}`) : null;
               return (
-                <span
+                <div
                   key={i}
-                  className="inline-block rounded-full border border-border bg-background px-6 py-3 font-serif text-lg italic text-foreground"
+                  className="flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-border bg-background px-5 py-4"
                 >
-                  {reg.label}
-                </span>
+                  {href ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-10 items-center gap-1.5 font-serif text-lg italic text-foreground transition-colors hover:text-gold"
+                    >
+                      {reg.label} <ExternalLink size={13} className="not-italic" />
+                    </a>
+                  ) : (
+                    <span className="inline-flex min-h-10 items-center font-serif text-lg italic text-foreground">
+                      {reg.label}
+                    </span>
+                  )}
+                  {reg.eventNumber?.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => copyText(reg.eventNumber!.trim(), "Número de evento")}
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-dashed border-border px-4 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                      aria-label={`Copiar número de evento de ${reg.label}`}
+                    >
+                      Evento #{reg.eventNumber.trim()} <Copy size={12} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -1468,6 +1597,23 @@ function GiftSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => 
           <p {...fade(300, "mt-6 inline-block rounded-full border border-border bg-background px-6 py-3 font-serif text-lg italic text-foreground")}>
             {legacy || "Mesa de regalos por confirmar"}
           </p>
+        )}
+        {cashFund && (
+          <div
+            {...fade(400, "mx-auto mt-6 flex max-w-md flex-col items-center gap-2 rounded-3xl border border-border bg-background p-6")}
+          >
+            <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <Wallet size={15} aria-hidden="true" /> Lluvia de sobres
+            </p>
+            <p className="font-serif text-xl tracking-wide text-foreground">{cashFund}</p>
+            <button
+              type="button"
+              onClick={() => copyText(cashFund, "CLABE")}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-90"
+            >
+              <Copy size={14} aria-hidden="true" /> Copiar CLABE
+            </button>
+          </div>
         )}
       </div>
     </section>
@@ -1503,6 +1649,26 @@ function FaqSection({ wedding, onEdit }: { wedding: WeddingSite; onEdit: () => v
       </Accordion>
     </section>
   );
+}
+
+/** Iniciales para el monograma del libro de firmas */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.charAt(0) ?? "?") + (parts[1]?.charAt(0) ?? "")).toUpperCase();
+}
+
+/** Tiempo relativo corto en español */
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const mins = Math.floor((Date.now() - then) / 60000);
+  if (mins < 1) return "ahora";
+  if (mins < 60) return `hace ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `hace ${days} ${days === 1 ? "día" : "días"}`;
+  return new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
 }
 
 function WishesSection({ wedding }: { wedding: WeddingSite }) {
@@ -1573,17 +1739,35 @@ function WishesSection({ wedding }: { wedding: WeddingSite }) {
           </form>
         )}
         {wishes.length > 0 && (
-          <div {...fade(300, "mt-10 grid gap-3 text-left sm:grid-cols-2")}>
-            {wishes.map((wish) => (
-              <figure key={wish.at + wish.name} className="card-lift rounded-2xl border border-border p-4">
-                <blockquote className="font-serif text-base italic leading-relaxed text-foreground">
-                  “{wish.message}”
-                </blockquote>
-                <figcaption className="mt-3 text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                  {wish.name} · {new Date(wish.at).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
-                </figcaption>
-              </figure>
-            ))}
+          <div {...fade(300, "mt-10")}>
+            <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-border px-4 py-1.5 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              <Heart size={12} style={{ color: "var(--wed-accent)" }} aria-hidden="true" />
+              {wishes.length} {wishes.length === 1 ? "mensaje" : "mensajes"} de cariño
+            </p>
+            <div className="grid gap-3 text-left sm:grid-cols-2">
+              {wishes.map((wish, i) => (
+                <figure
+                  key={wish.at + wish.name}
+                  {...fade(300 + i * 90, "card-lift flex items-start gap-3 rounded-2xl border border-border p-4")}
+                >
+                  <span
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full font-serif text-sm tracking-wide"
+                    style={{ background: "var(--wed-soft)", color: "var(--wed-accent)" }}
+                    aria-hidden="true"
+                  >
+                    {initials(wish.name)}
+                  </span>
+                  <div className="min-w-0">
+                    <blockquote className="font-serif text-base italic leading-relaxed text-foreground">
+                      “{wish.message}”
+                    </blockquote>
+                    <figcaption className="mt-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      {wish.name} · {relativeTime(wish.at)}
+                    </figcaption>
+                  </div>
+                </figure>
+              ))}
+            </div>
           </div>
         )}
         <p {...fade(350, "mt-6 text-[11px] text-muted-foreground")}>
@@ -1649,17 +1833,22 @@ function RsvpConfetti({ show }: { show: boolean }) {
 
 function RsvpSection({ wedding }: { wedding: WeddingSite }) {
   const { addRsvp } = useEvent();
+  const guestName = useGuestName();
   const reduceMotion = useReducedMotion();
   const [sent, setSent] = useState(false);
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(guestName ?? "");
   const [email, setEmail] = useState("");
   const [attending, setAttending] = useState<"si" | "no" | null>(null);
   const [companions, setCompanions] = useState(0);
   const [allergies, setAllergies] = useState("");
   const [showConfetti, setShowConfetti] = useState(false);
   const names = coupleNames(wedding);
+
+  useEffect(() => {
+    if (guestName) setName((n) => (n.trim() ? n : guestName));
+  }, [guestName]);
 
   const goTo = (next: number) => {
     setDir(next > step ? 1 : -1);
@@ -2105,11 +2294,14 @@ export function BodaClient() {
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   // undefined = aún no leído el hash; null = sin enlace compartido; WeddingShare = modo compartido
   const [shared, setShared] = useState<WeddingShare | null | undefined>(undefined);
+  const [guestName, setGuestName] = useState<string | null>(null);
 
   useEffect(() => {
     const readHash = () => {
       const match = window.location.hash.match(/#s=([A-Za-z0-9_-]+)/);
       setShared(match ? decodeWeddingShare(match[1]) : null);
+      const inv = window.location.hash.match(/[?&]inv=([^&]*)/);
+      setGuestName(inv ? decodeURIComponent(inv[1]).slice(0, 60) : null);
     };
     readHash();
     window.addEventListener("hashchange", readHash);
@@ -2127,8 +2319,7 @@ export function BodaClient() {
   };
 
   const openQr = () => {
-    const hash = encodeWeddingShare(wedding, details);
-    setQrUrl(`${window.location.origin}/mi-evento/boda#s=${hash}`);
+    setQrUrl(shareUrl());
   };
 
   if (shared === undefined || (!shared && !hydrated)) {
@@ -2158,11 +2349,18 @@ export function BodaClient() {
   const names = coupleNames(viewWedding);
   const theme = THEMES[viewWedding.theme] ?? THEMES.arena;
 
-  const copyShareLink = async () => {
+  const shareUrl = (invName?: string) => {
+    const hash = encodeWeddingShare(wedding, details);
+    const base = `${window.location.origin}/mi-evento/boda#s=${hash}`;
+    return invName ? `${base}&inv=${encodeURIComponent(invName)}` : base;
+  };
+
+  const copyShareLink = async (invName?: string) => {
     try {
-      const hash = encodeWeddingShare(wedding, details);
-      await navigator.clipboard.writeText(`${window.location.origin}/mi-evento/boda#s=${hash}`);
-      toast.success("Enlace para invitados copiado");
+      await navigator.clipboard.writeText(shareUrl(invName));
+      toast.success(
+        invName ? `Pase personalizado para ${invName} copiado` : "Enlace para invitados copiado"
+      );
     } catch {
       toast.error("No pudimos copiar el enlace");
     }
@@ -2194,6 +2392,7 @@ export function BodaClient() {
 
   return (
     <BodaViewDetailsContext.Provider value={viewDetails}>
+      <GuestNameContext.Provider value={guestName}>
       <GuestModeContext.Provider value={effectiveGuestMode}>
         <main
           className="editorial themed min-h-screen bg-background"
@@ -2237,12 +2436,14 @@ export function BodaClient() {
                   ? details.date.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })
                   : ""
               }
+              personalize={(invName) => shareUrl(invName)}
             />
           )}
           {!shared && <CommandPalette open={palette.open} onOpenChange={palette.setOpen} groups={paletteGroups} placeholder="Busca una sección o acción…" />}
           <Toaster position={isMobile ? "bottom-center" : "bottom-right"} />
           <ScrollProgress />
           <HeroSection wedding={viewWedding} onEdit={() => openEdit("edit-portada")} />
+          {guestName && shared && <GuestPassCard name={guestName} />}
           <Reveal>
             <WelcomeSection wedding={viewWedding} onEdit={() => openEdit("edit-mensaje")} />
           </Reveal>
@@ -2300,6 +2501,7 @@ export function BodaClient() {
           </footer>
         </main>
       </GuestModeContext.Provider>
+      </GuestNameContext.Provider>
     </BodaViewDetailsContext.Provider>
   );
 }

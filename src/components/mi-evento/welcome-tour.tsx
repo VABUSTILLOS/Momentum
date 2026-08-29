@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Check, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Sparkles, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/components/ui/use-mobile";
@@ -136,6 +136,10 @@ export function WelcomeTour() {
 
   const visibleSpotlights = SPOTLIGHTS.filter((s) => typeof document !== "undefined" && document.getElementById(s.id));
 
+  const goStep = useCallback((delta: number) => {
+    setStep((s) => Math.min(Math.max(0, s + delta), STEPS.length - 1));
+  }, []);
+
   const measureSpot = useCallback(
     (index: number) => {
       const target = visibleSpotlights[index];
@@ -162,7 +166,7 @@ export function WelcomeTour() {
     measureSpot(0);
   };
 
-  const nextSpot = () => {
+  const nextSpot = useCallback(() => {
     const next = spot + 1;
     if (next >= visibleSpotlights.length) {
       setPhase("idle");
@@ -172,18 +176,68 @@ export function WelcomeTour() {
     }
     setSpot(next);
     measureSpot(next);
-  };
+  }, [spot, visibleSpotlights.length, markDone, measureSpot]);
 
-  const closeAll = () => {
+  const prevSpot = useCallback(() => {
+    const prev = Math.max(0, spot - 1);
+    if (prev === spot) return;
+    setSpot(prev);
+    measureSpot(prev);
+  }, [spot, measureSpot]);
+
+  const closeAll = useCallback(() => {
     setPhase("idle");
     setRect(null);
     markDone();
-  };
+  }, [markDone]);
+
+  // Navegación por teclado (welcome y spotlight)
+  useEffect(() => {
+    if (phase === "idle") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (phase === "welcome") {
+        if (e.key === "ArrowRight" || e.key === "Enter") {
+          e.preventDefault();
+          if (step < STEPS.length - 1) goStep(1);
+          else finishWelcome();
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          goStep(-1);
+        }
+      } else if (phase === "spotlight") {
+        if (e.key === "ArrowRight" || e.key === "Enter") {
+          e.preventDefault();
+          nextSpot();
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          prevSpot();
+        } else if (e.key === "Escape") {
+          closeAll();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [phase, step, goStep, nextSpot, prevSpot, closeAll]);
 
   const current = STEPS[step];
 
   const welcomeBody = (
     <div className="flex flex-col items-center px-6 pb-6 pt-2 text-center">
+      {/* Progreso */}
+      <div className="flex w-full items-center gap-3">
+        <div className="h-1 flex-1 overflow-hidden rounded-full bg-border">
+          <motion.div
+            className="h-full rounded-full bg-gold"
+            initial={false}
+            animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+          />
+        </div>
+        <span className="text-[11px] font-medium tabular-nums text-muted-foreground">
+          Paso {step + 1} de {STEPS.length}
+        </span>
+      </div>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={step}
@@ -191,6 +245,17 @@ export function WelcomeTour() {
           animate={{ opacity: 1, x: 0 }}
           exit={reduce ? undefined : { opacity: 0, x: -24 }}
           transition={{ duration: 0.25 }}
+          drag={isMobile && !reduce ? "x" : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={(_e, info) => {
+            if (info.offset.x < -60) {
+              if (step < STEPS.length - 1) goStep(1);
+              else finishWelcome();
+            } else if (info.offset.x > 60) {
+              goStep(-1);
+            }
+          }}
           className="flex w-full flex-col items-center"
         >
           <div className="w-44">{current.art}</div>
@@ -204,17 +269,27 @@ export function WelcomeTour() {
         ))}
       </div>
       <div className="mt-5 flex w-full items-center gap-2">
-        <button
-          type="button"
-          onClick={closeAll}
-          className="hit-44 min-h-11 flex-1 rounded-full border border-border text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Ya lo conozco
-        </button>
+        {step > 0 ? (
+          <button
+            type="button"
+            onClick={() => goStep(-1)}
+            className="hit-44 inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full border border-border text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft size={14} /> Atrás
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={closeAll}
+            className="hit-44 min-h-11 flex-1 rounded-full border border-border text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Omitir tour
+          </button>
+        )}
         {step < STEPS.length - 1 ? (
           <button
             type="button"
-            onClick={() => setStep((s) => s + 1)}
+            onClick={() => goStep(1)}
             className="hit-44 inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-foreground text-sm font-semibold text-background transition-opacity hover:opacity-90"
           >
             Siguiente <ArrowRight size={14} />
@@ -238,7 +313,10 @@ export function WelcomeTour() {
     <>
       {isMobile ? (
         <Sheet open={phase === "welcome"} onOpenChange={(o) => !o && closeAll()}>
-          <SheetContent side="bottom" className="rounded-t-3xl">
+          <SheetContent
+            side="bottom"
+            className="rounded-t-3xl [&>button]:flex [&>button]:size-10 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-full [&>button]:bg-secondary [&>button]:opacity-100"
+          >
             <SheetTitle className="sr-only">Tour de bienvenida</SheetTitle>
             <p className="pt-1 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-gold">Bienvenido a tu planeador</p>
             {welcomeBody}
@@ -246,7 +324,7 @@ export function WelcomeTour() {
         </Sheet>
       ) : (
         <Dialog open={phase === "welcome"} onOpenChange={(o) => !o && closeAll()}>
-          <DialogContent className="max-w-md rounded-3xl" showCloseButton={false}>
+          <DialogContent className="max-w-md rounded-3xl" showCloseButton>
             <DialogTitle className="sr-only">Tour de bienvenida</DialogTitle>
             <p className="pt-2 text-center text-[11px] font-semibold uppercase tracking-[0.24em] text-gold">Bienvenido a tu planeador</p>
             {welcomeBody}
@@ -278,6 +356,14 @@ export function WelcomeTour() {
               top: rect.bottom + pad + 12 + 150 < window.innerHeight ? rect.bottom + pad + 12 : Math.max(16, rect.top - pad - 168),
             }}
           >
+            <button
+              type="button"
+              aria-label="Cerrar guía"
+              onClick={closeAll}
+              className="hit-44 absolute -right-2 -top-2 inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-md transition-colors hover:text-foreground"
+            >
+              <X size={14} />
+            </button>
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold">
               Paso {spot + 1} de {visibleSpotlights.length}
             </p>

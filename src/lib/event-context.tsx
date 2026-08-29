@@ -60,6 +60,8 @@ export interface WeddingSite {
   accommodationNote: string;
   faqs: FaqEntry[];
   registries: RegistryEntry[];
+  /** CLABE / tarjeta para lluvia de sobres (opcional) */
+  cashFund: string;
 }
 
 export interface RsvpEntry {
@@ -92,6 +94,8 @@ export interface FaqEntry {
 export interface RegistryEntry {
   label: string;
   url: string;
+  /** Número de evento de la mesa (ej. Liverpool), opcional */
+  eventNumber?: string;
 }
 
 /** Tareas sugeridas por tipo de evento; dueDays = días antes del evento */
@@ -237,6 +241,7 @@ export const DEFAULT_WEDDING: WeddingSite = {
     { q: "¿Habrá estacionamiento?", a: "" },
   ],
   registries: [],
+  cashFund: "",
 };
 
 function loadStoredState(): StoredState | null {
