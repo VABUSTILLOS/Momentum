@@ -5,11 +5,14 @@ import { createImageTask, isKieAiConfigured, kieAiErrorResponse } from "@/lib/ai
 
 const bodySchema = z.object({
   prompt: z.string().min(1, "prompt es requerido").max(4000),
-  model: z.string().optional(),
+  // `size` es obligatorio en el endpoint 4o Image de Kie.ai; este piloto envía
+  // "1:1" por defecto. `model` NO es parte del schema → no se envía.
+  size: z.enum(["1:1", "3:2", "2:3"]).optional(),
 });
 
 // POST /api/admin/kie-ai/image
-// Inicia una tarea asíncrona de generación de imagen en Kie.ai. Body: { prompt, model? }.
+// Inicia una tarea asíncrona de generación de imagen (endpoint 4o Image) en
+// Kie.ai. Body: { prompt, size? } — `size` por defecto "1:1".
 // Regresa { taskId }; haz polling a GET /api/admin/kie-ai/status?taskId=... por el resultado.
 export async function POST(request: NextRequest) {
   try {
@@ -35,7 +38,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const task = await createImageTask(parsed.data);
+    const task = await createImageTask({
+      prompt: parsed.data.prompt,
+      size: parsed.data.size ?? "1:1",
+    });
     return NextResponse.json({ taskId: task.taskId });
   } catch (err) {
     try {

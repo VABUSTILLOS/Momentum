@@ -69,32 +69,18 @@ async function kieFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!res.ok) {
-    const message =
-      (json &&
-      typeof json === "object" &&
-      "message" in json &&
-      typeof (json as { message?: unknown }).message === "string"
-        ? (json as { message: string }).message
-        : null) || `Kie.ai respondió con el status ${res.status}`;
+    // Kie.ai devuelve los errores como `{ code, msg }` (y los endpoints tipo
+    // OpenAI como `{ message }`); se extrae cualquiera de los dos.
+    const errBody =
+      json && typeof json === "object" ? (json as Record<string, unknown>) : undefined;
+    const detail =
+      (typeof errBody?.message === "string" ? errBody.message : undefined) ??
+      (typeof errBody?.msg === "string" ? errBody.msg : undefined);
+    const message = detail || `Kie.ai respondió con el status ${res.status}`;
     throw new KieAiError(message, res.status, json);
   }
 
   return json as T;
-}
-
-// ─── Modelos ──────────────────────────────────────────────────────────────
-
-export interface KieAiModel {
-  id: string;
-  name?: string;
-  type?: string;
-  [key: string]: unknown;
-}
-
-/** GET /api/v1/models — lista los modelos disponibles (imagen/video/música/LLM). */
-export async function listModels(): Promise<KieAiModel[]> {
-  const data = await kieFetch<{ data?: KieAiModel[]; models?: KieAiModel[] }>("/api/v1/models");
-  return data.data ?? data.models ?? [];
 }
 
 // ─── Tareas de generación asíncronas (imagen / video / música) ─────────────
@@ -124,15 +110,23 @@ export async function createGenerationTask(
   return { ...data.data, taskId };
 }
 
-/** Inicia una tarea de generación de imagen. `modelPath` por defecto: endpoint general de imagen. */
+/**
+ * Inicia una tarea de generación de imagen (endpoint 4o Image). `modelPath` por
+ * defecto: `/api/v1/gpt4o-image/generate`. La API exige `size` además de
+ * `prompt`; `model` NO es parte del schema de este endpoint.
+ */
 export function createImageTask(
-  input: { prompt: string; model?: string; [key: string]: unknown },
+  input: { prompt: string; [key: string]: unknown },
   modelPath = "/api/v1/gpt4o-image/generate"
 ) {
   return createGenerationTask(modelPath, input);
 }
 
-/** Inicia una tarea de generación de video. `modelPath` por defecto: endpoint general de video. */
+/**
+ * Inicia una tarea de generación de video (endpoint Veo). `modelPath` por
+ * defecto: `/api/v1/veo/generate`. La API exige `model` (p. ej. "veo3_fast") y
+ * acepta `aspect_ratio`; el route handler llena los valores por defecto.
+ */
 export function createVideoTask(
   input: { prompt: string; model?: string; [key: string]: unknown },
   modelPath = "/api/v1/veo/generate"
@@ -140,10 +134,15 @@ export function createVideoTask(
   return createGenerationTask(modelPath, input);
 }
 
-/** Inicia una tarea de generación de música. `modelPath` por defecto: endpoint general de música. */
+/**
+ * Inicia una tarea de generación de música. `modelPath` por defecto:
+ * `/api/v1/generate` (modelo tipo Suno). La API exige un body con al menos
+ * `{ prompt, customMode, instrumental, model, callBackUrl }`; el route handler
+ * de música llena los valores por defecto (ver music/route.ts).
+ */
 export function createMusicTask(
-  input: { prompt: string; model?: string; [key: string]: unknown },
-  modelPath = "/api/v1/suno/generate"
+  input: { prompt: string; model?: string; callBackUrl?: string; [key: string]: unknown },
+  modelPath = "/api/v1/generate"
 ) {
   return createGenerationTask(modelPath, input);
 }
@@ -153,17 +152,27 @@ export type KieAiTaskState = "waiting" | "queuing" | "generating" | "success" | 
 export interface KieAiTaskRecord {
   taskId: string;
   state: KieAiTaskState;
+  /** JSON con la URL/descripción del resultado cuando la tarea termina. */
   resultJson?: string;
+  /** URLs de los archivos generados (imagen/video/música); algunas tareas los exponen aquí. */
+  resultUrls?: unknown[];
   failMsg?: string;
   [key: string]: unknown;
 }
 
 /** GET /api/v1/jobs/recordInfo?taskId=... — estado/resultado actual de una tarea asíncrona. */
 export async function getTaskStatus(taskId: string): Promise<KieAiTaskRecord> {
-  const data = await kieFetch<{ data?: KieAiTaskRecord } & Partial<KieAiTaskRecord>>(
-    `/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`
-  );
-  return (data.data ?? data) as KieAiTaskRecord;
+  const data = await kieFetch<
+    { data?: KieAiTaskRecord; record?: KieAiTaskRecord } & Partial<KieAiTaskRecord>
+  >(`/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`);
+
+  // El registro real puede venir bajo `data` o bajo `data.record`; se aplana para
+  // que `resultJson` / `resultUrls` queden accesibles en el objeto devuelto.
+  const record = (data.data ?? data) as KieAiTaskRecord & { record?: KieAiTaskRecord };
+  if (record.record && typeof record.record === "object") {
+    return record.record;
+  }
+  return record;
 }
 
 const TERMINAL_STATES = new Set(["success", "fail", "completed", "failed"]);
@@ -204,7 +213,12 @@ export interface KieAiChatResult {
   raw: unknown;
 }
 
-/** POST /api/v1/chat/completions — llamada síncrona compatible con chat completions de OpenAI. */
+/**
+ * POST /v1/chat/completions — llamada síncrona compatible con chat completions
+ * de OpenAI. Nota: a diferencia del resto de endpoints de Kie.ai (todos bajo
+ * `/api/v1/`), el endpoint de chat vive bajo `/v1/...` (sin prefijo `api`);
+ * el path `/api/v1/chat/completions` responde 404.
+ */
 export async function chatCompletion(params: {
   model: string;
   messages: KieAiChatMessage[];
@@ -212,7 +226,7 @@ export async function chatCompletion(params: {
 }): Promise<KieAiChatResult> {
   const data = await kieFetch<{
     choices?: { message?: { content?: string } }[];
-  }>("/api/v1/chat/completions", {
+  }>("/v1/chat/completions", {
     method: "POST",
     body: JSON.stringify(params),
   });
